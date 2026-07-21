@@ -1,0 +1,189 @@
+{
+    "seed": 42,
+    "coarse_groups": {
+        "vehicles_2": {
+            "seen": [
+                "lawn_mower",
+                "tank",
+                "streetcar"
+            ],
+            "unseen": [
+                "rocket",
+                "tractor"
+            ]
+        },
+        "furniture": {
+            "seen": [
+                "bed",
+                "wardrobe",
+                "couch"
+            ],
+            "unseen": [
+                "table",
+                "chair"
+            ]
+        },
+        "people": {
+            "seen": [
+                "woman",
+                "man",
+                "girl"
+            ],
+            "unseen": [
+                "boy",
+                "baby"
+            ]
+        },
+        "fruit_and_vegetables": {
+            "seen": [
+                "mushroom",
+                "pear",
+                "apple"
+            ],
+            "unseen": [
+                "sweet_pepper",
+                "orange"
+            ]
+        },
+        "large_man-made_outdoor_things": {
+            "seen": [
+                "skyscraper",
+                "castle",
+                "road"
+            ],
+            "unseen": [
+                "bridge",
+                "house"
+            ]
+        }
+    },
+    "fine_groups": {
+        "non-insect_invertebrates": {
+            "seen": [
+                "worm",
+                "spider",
+                "lobster"
+            ],
+            "ood": [
+                "snail",
+                "crab"
+            ]
+        },
+        "reptiles": {
+            "seen": [
+                "dinosaur",
+                "turtle",
+                "lizard"
+            ],
+            "ood": [
+                "snake",
+                "crocodile"
+            ]
+        },
+        "vehicles_1": {
+            "seen": [
+                "train",
+                "bus",
+                "motorcycle"
+            ],
+            "ood": [
+                "bicycle",
+                "pickup_truck"
+            ]
+        },
+        "household_electrical_devices": {
+            "seen": [
+                "keyboard",
+                "clock",
+                "telephone"
+            ],
+            "ood": [
+                "lamp",
+                "television"
+            ]
+        },
+        "medium_mammals": {
+            "seen": [
+                "porcupine",
+                "raccoon",
+                "possum"
+            ],
+            "ood": [
+                "skunk",
+                "fox"
+            ]
+        }
+    },
+    "far_ood_structure": {
+        "trees": [
+            "maple_tree",
+            "oak_tree",
+            "palm_tree",
+            "pine_tree",
+            "willow_tree"
+        ],
+        "large_natural_outdoor_scenes": [
+            "cloud",
+            "forest",
+            "mountain",
+            "plain",
+            "sea"
+        ],
+        "fish": [
+            "aquarium_fish",
+            "flatfish",
+            "ray",
+            "shark",
+            "trout"
+        ],
+        "large_omnivores_and_herbivores": [
+            "camel",
+            "cattle",
+            "chimpanzee",
+            "kangaroo",
+            "elephant"
+        ],
+        "flowers": [
+            "orchid",
+            "poppy",
+            "rose",
+            "sunflower",
+            "tulip"
+        ],
+        "small_mammals": [
+            "hamster",
+            "mouse",
+            "rabbit",
+            "shrew",
+            "squirrel"
+        ],
+        "insects": [
+            "bee",
+            "beetle",
+            "butterfly",
+            "caterpillar",
+            "cockroach"
+        ],
+        "large_carnivores": [
+            "bear",
+            "leopard",
+            "lion",
+            "tiger",
+            "wolf"
+        ],
+        "aquatic_mammals": [
+            "beaver",
+            "dolphin",
+            "otter",
+            "seal",
+            "whale"
+        ],
+        "food_containers": [
+            "bottle",
+            "bowl",
+            "can",
+            "cup",
+            "plate"
+        ]
+    }
+}

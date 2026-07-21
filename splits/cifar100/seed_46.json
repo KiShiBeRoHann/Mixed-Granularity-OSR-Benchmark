@@ -1,0 +1,189 @@
+{
+    "seed": 46,
+    "coarse_groups": {
+        "aquatic_mammals": {
+            "seen": [
+                "beaver",
+                "dolphin",
+                "otter"
+            ],
+            "unseen": [
+                "seal",
+                "whale"
+            ]
+        },
+        "fish": {
+            "seen": [
+                "aquarium_fish",
+                "flatfish",
+                "ray"
+            ],
+            "unseen": [
+                "shark",
+                "trout"
+            ]
+        },
+        "flowers": {
+            "seen": [
+                "orchid",
+                "poppy",
+                "rose"
+            ],
+            "unseen": [
+                "sunflower",
+                "tulip"
+            ]
+        },
+        "food_containers": {
+            "seen": [
+                "bottle",
+                "bowl",
+                "can"
+            ],
+            "unseen": [
+                "cup",
+                "plate"
+            ]
+        },
+        "fruit_and_vegetables": {
+            "seen": [
+                "apple",
+                "mushroom",
+                "orange"
+            ],
+            "unseen": [
+                "pear",
+                "sweet_pepper"
+            ]
+        }
+    },
+    "fine_groups": {
+        "household_electrical_devices": {
+            "seen": [
+                "clock",
+                "keyboard",
+                "lamp"
+            ],
+            "ood": [
+                "telephone",
+                "television"
+            ]
+        },
+        "furniture": {
+            "seen": [
+                "bed",
+                "chair",
+                "couch"
+            ],
+            "ood": [
+                "table",
+                "wardrobe"
+            ]
+        },
+        "insects": {
+            "seen": [
+                "bee",
+                "beetle",
+                "butterfly"
+            ],
+            "ood": [
+                "caterpillar",
+                "cockroach"
+            ]
+        },
+        "large_carnivores": {
+            "seen": [
+                "bear",
+                "leopard",
+                "lion"
+            ],
+            "ood": [
+                "tiger",
+                "wolf"
+            ]
+        },
+        "large_man-made_outdoor_things": {
+            "seen": [
+                "bridge",
+                "castle",
+                "house"
+            ],
+            "ood": [
+                "road",
+                "skyscraper"
+            ]
+        }
+    },
+    "far_ood_structure": {
+        "large_natural_outdoor_scenes": [
+            "cloud",
+            "forest",
+            "mountain",
+            "plain",
+            "sea"
+        ],
+        "large_omnivores_and_herbivores": [
+            "camel",
+            "cattle",
+            "chimpanzee",
+            "elephant",
+            "kangaroo"
+        ],
+        "medium_mammals": [
+            "fox",
+            "porcupine",
+            "possum",
+            "raccoon",
+            "skunk"
+        ],
+        "non-insect_invertebrates": [
+            "crab",
+            "lobster",
+            "snail",
+            "spider",
+            "worm"
+        ],
+        "people": [
+            "baby",
+            "boy",
+            "girl",
+            "man",
+            "woman"
+        ],
+        "reptiles": [
+            "crocodile",
+            "dinosaur",
+            "lizard",
+            "snake",
+            "turtle"
+        ],
+        "small_mammals": [
+            "hamster",
+            "mouse",
+            "rabbit",
+            "shrew",
+            "squirrel"
+        ],
+        "trees": [
+            "maple_tree",
+            "oak_tree",
+            "palm_tree",
+            "pine_tree",
+            "willow_tree"
+        ],
+        "vehicles_1": [
+            "bicycle",
+            "bus",
+            "motorcycle",
+            "pickup_truck",
+            "train"
+        ],
+        "vehicles_2": [
+            "lawn_mower",
+            "rocket",
+            "streetcar",
+            "tank",
+            "tractor"
+        ]
+    }
+}

@@ -1,0 +1,189 @@
+{
+    "seed": 45,
+    "coarse_groups": {
+        "small_mammals": {
+            "seen": [
+                "squirrel",
+                "hamster",
+                "shrew"
+            ],
+            "unseen": [
+                "rabbit",
+                "mouse"
+            ]
+        },
+        "food_containers": {
+            "seen": [
+                "can",
+                "plate",
+                "bottle"
+            ],
+            "unseen": [
+                "cup",
+                "bowl"
+            ]
+        },
+        "large_natural_outdoor_scenes": {
+            "seen": [
+                "sea",
+                "mountain",
+                "plain"
+            ],
+            "unseen": [
+                "cloud",
+                "forest"
+            ]
+        },
+        "vehicles_1": {
+            "seen": [
+                "bicycle",
+                "pickup_truck",
+                "bus"
+            ],
+            "unseen": [
+                "train",
+                "motorcycle"
+            ]
+        },
+        "trees": {
+            "seen": [
+                "oak_tree",
+                "palm_tree",
+                "willow_tree"
+            ],
+            "unseen": [
+                "pine_tree",
+                "maple_tree"
+            ]
+        }
+    },
+    "fine_groups": {
+        "large_man-made_outdoor_things": {
+            "seen": [
+                "bridge",
+                "road",
+                "castle"
+            ],
+            "ood": [
+                "skyscraper",
+                "house"
+            ]
+        },
+        "household_electrical_devices": {
+            "seen": [
+                "telephone",
+                "lamp",
+                "keyboard"
+            ],
+            "ood": [
+                "clock",
+                "television"
+            ]
+        },
+        "people": {
+            "seen": [
+                "woman",
+                "man",
+                "baby"
+            ],
+            "ood": [
+                "girl",
+                "boy"
+            ]
+        },
+        "large_omnivores_and_herbivores": {
+            "seen": [
+                "camel",
+                "kangaroo",
+                "chimpanzee"
+            ],
+            "ood": [
+                "elephant",
+                "cattle"
+            ]
+        },
+        "medium_mammals": {
+            "seen": [
+                "fox",
+                "skunk",
+                "raccoon"
+            ],
+            "ood": [
+                "porcupine",
+                "possum"
+            ]
+        }
+    },
+    "far_ood_structure": {
+        "insects": [
+            "bee",
+            "beetle",
+            "butterfly",
+            "caterpillar",
+            "cockroach"
+        ],
+        "fish": [
+            "aquarium_fish",
+            "flatfish",
+            "ray",
+            "shark",
+            "trout"
+        ],
+        "aquatic_mammals": [
+            "beaver",
+            "dolphin",
+            "otter",
+            "seal",
+            "whale"
+        ],
+        "furniture": [
+            "bed",
+            "chair",
+            "couch",
+            "table",
+            "wardrobe"
+        ],
+        "fruit_and_vegetables": [
+            "apple",
+            "mushroom",
+            "orange",
+            "pear",
+            "sweet_pepper"
+        ],
+        "flowers": [
+            "orchid",
+            "poppy",
+            "rose",
+            "sunflower",
+            "tulip"
+        ],
+        "vehicles_2": [
+            "lawn_mower",
+            "rocket",
+            "streetcar",
+            "tank",
+            "tractor"
+        ],
+        "reptiles": [
+            "crocodile",
+            "dinosaur",
+            "lizard",
+            "snake",
+            "turtle"
+        ],
+        "non-insect_invertebrates": [
+            "crab",
+            "lobster",
+            "snail",
+            "spider",
+            "worm"
+        ],
+        "large_carnivores": [
+            "bear",
+            "leopard",
+            "lion",
+            "tiger",
+            "wolf"
+        ]
+    }
+}

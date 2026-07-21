@@ -1,0 +1,17 @@
+
+datasets/
+data/
+Dassl.pytorch/
+A2Pt/
+CoOp/
+
+
+__pycache__/
+*.pyc
+*.pth
+*.pt
+.vscode/
+.reasonix/
+experiment_logs/
+models/
+pictures/

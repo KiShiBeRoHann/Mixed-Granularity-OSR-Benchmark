@@ -1,0 +1,361 @@
+{
+    "seed": 44,
+    "total_id_classes": 20,
+    "split_config": {
+        "coarse_id": [
+            {
+                "label": 0,
+                "head_name": "Boeing 747 (Family)",
+                "seen_variants": [
+                    "747-100",
+                    "747-200"
+                ]
+            },
+            {
+                "label": 1,
+                "head_name": "Cessna Citation (Family)",
+                "seen_variants": [
+                    "Cessna 525"
+                ]
+            },
+            {
+                "label": 2,
+                "head_name": "MD-80 (Family)",
+                "seen_variants": [
+                    "MD-80"
+                ]
+            },
+            {
+                "label": 3,
+                "head_name": "Boeing 767 (Family)",
+                "seen_variants": [
+                    "767-400"
+                ]
+            },
+            {
+                "label": 4,
+                "head_name": "CRJ-700 (Family)",
+                "seen_variants": [
+                    "CRJ-700"
+                ]
+            },
+            {
+                "label": 5,
+                "head_name": "Embraer E-Jet (Family)",
+                "seen_variants": [
+                    "E-195"
+                ]
+            }
+        ],
+        "coarse_gen": [
+            {
+                "mapped_label": 0,
+                "unseen_variants": [
+                    "747-400",
+                    "747-300"
+                ]
+            },
+            {
+                "mapped_label": 1,
+                "unseen_variants": [
+                    "Cessna 560"
+                ]
+            },
+            {
+                "mapped_label": 2,
+                "unseen_variants": [
+                    "MD-87"
+                ]
+            },
+            {
+                "mapped_label": 3,
+                "unseen_variants": [
+                    "767-200",
+                    "767-300"
+                ]
+            },
+            {
+                "mapped_label": 4,
+                "unseen_variants": [
+                    "CRJ-900"
+                ]
+            },
+            {
+                "mapped_label": 5,
+                "unseen_variants": [
+                    "E-170",
+                    "E-190"
+                ]
+            }
+        ],
+        "medium_id": [],
+        "medium_gen": [],
+        "near_family": [],
+        "medium_groups": [],
+        "fine_id": [
+            {
+                "label": 6,
+                "head_name": "A319 (Variant)",
+                "seen_variants": [
+                    "A319"
+                ]
+            },
+            {
+                "label": 7,
+                "head_name": "A321 (Variant)",
+                "seen_variants": [
+                    "A321"
+                ]
+            },
+            {
+                "label": 8,
+                "head_name": "737-500 (Variant)",
+                "seen_variants": [
+                    "737-500"
+                ]
+            },
+            {
+                "label": 9,
+                "head_name": "737-900 (Variant)",
+                "seen_variants": [
+                    "737-900"
+                ]
+            },
+            {
+                "label": 10,
+                "head_name": "737-600 (Variant)",
+                "seen_variants": [
+                    "737-600"
+                ]
+            },
+            {
+                "label": 11,
+                "head_name": "737-700 (Variant)",
+                "seen_variants": [
+                    "737-700"
+                ]
+            },
+            {
+                "label": 12,
+                "head_name": "BAE 146-200 (Variant)",
+                "seen_variants": [
+                    "BAE 146-200"
+                ]
+            },
+            {
+                "label": 13,
+                "head_name": "757-300 (Variant)",
+                "seen_variants": [
+                    "757-300"
+                ]
+            },
+            {
+                "label": 14,
+                "head_name": "A340-500 (Variant)",
+                "seen_variants": [
+                    "A340-500"
+                ]
+            },
+            {
+                "label": 15,
+                "head_name": "A340-200 (Variant)",
+                "seen_variants": [
+                    "A340-200"
+                ]
+            },
+            {
+                "label": 16,
+                "head_name": "A330-300 (Variant)",
+                "seen_variants": [
+                    "A330-300"
+                ]
+            },
+            {
+                "label": 17,
+                "head_name": "DHC-8-300 (Variant)",
+                "seen_variants": [
+                    "DHC-8-300"
+                ]
+            },
+            {
+                "label": 18,
+                "head_name": "Gulfstream IV (Variant)",
+                "seen_variants": [
+                    "Gulfstream IV"
+                ]
+            },
+            {
+                "label": 19,
+                "head_name": "777-300 (Variant)",
+                "seen_variants": [
+                    "777-300"
+                ]
+            }
+        ],
+        "near_variant": [
+            "A320",
+            "A318",
+            "737-200",
+            "737-800",
+            "737-400",
+            "737-300",
+            "BAE 146-300",
+            "757-200",
+            "A340-300",
+            "A340-600",
+            "A330-200",
+            "DHC-8-100",
+            "Gulfstream V",
+            "777-200"
+        ],
+        "fine_groups": [
+            {
+                "family": "A320",
+                "heads": [
+                    "L6:A319",
+                    "L7:A321"
+                ],
+                "near_variants": [
+                    "A320",
+                    "A318"
+                ]
+            },
+            {
+                "family": "Boeing 737",
+                "heads": [
+                    "L8:737-500",
+                    "L9:737-900",
+                    "L10:737-600",
+                    "L11:737-700"
+                ],
+                "near_variants": [
+                    "737-200",
+                    "737-800",
+                    "737-400",
+                    "737-300"
+                ]
+            },
+            {
+                "family": "BAE 146",
+                "heads": [
+                    "L12:BAE 146-200"
+                ],
+                "near_variants": [
+                    "BAE 146-300"
+                ]
+            },
+            {
+                "family": "Boeing 757",
+                "heads": [
+                    "L13:757-300"
+                ],
+                "near_variants": [
+                    "757-200"
+                ]
+            },
+            {
+                "family": "A340",
+                "heads": [
+                    "L14:A340-500",
+                    "L15:A340-200"
+                ],
+                "near_variants": [
+                    "A340-300",
+                    "A340-600"
+                ]
+            },
+            {
+                "family": "A330",
+                "heads": [
+                    "L16:A330-300"
+                ],
+                "near_variants": [
+                    "A330-200"
+                ]
+            },
+            {
+                "family": "Dash 8",
+                "heads": [
+                    "L17:DHC-8-300"
+                ],
+                "near_variants": [
+                    "DHC-8-100"
+                ]
+            },
+            {
+                "family": "Gulfstream",
+                "heads": [
+                    "L18:Gulfstream IV"
+                ],
+                "near_variants": [
+                    "Gulfstream V"
+                ]
+            },
+            {
+                "family": "Boeing 777",
+                "heads": [
+                    "L19:777-300"
+                ],
+                "near_variants": [
+                    "777-200"
+                ]
+            }
+        ],
+        "far_ood": [
+            "A300B4",
+            "A310",
+            "A380",
+            "ATR-42",
+            "ATR-72",
+            "An-12",
+            "BAE-125",
+            "Beechcraft 1900",
+            "707-320",
+            "Boeing 717",
+            "727-200",
+            "C-130",
+            "C-47",
+            "CRJ-200",
+            "Cessna 172",
+            "Cessna 208",
+            "Challenger 600",
+            "DC-10",
+            "DC-3",
+            "DC-6",
+            "DC-8",
+            "DC-9-30",
+            "DH-82",
+            "DHC-1",
+            "DHC-6",
+            "DR-400",
+            "Dornier 328",
+            "EMB-120",
+            "Embraer Legacy 600",
+            "Eurofighter Typhoon",
+            "F-16A/B",
+            "F/A-18",
+            "Falcon 2000",
+            "Falcon 900",
+            "Fokker 100",
+            "Fokker 50",
+            "Fokker 70",
+            "Global Express",
+            "Hawk T1",
+            "Il-76",
+            "Model B200",
+            "L-1011",
+            "MD-11",
+            "MD-90",
+            "Metroliner",
+            "PA-28",
+            "SR-20",
+            "Saab 2000",
+            "Saab 340",
+            "Spitfire",
+            "Tornado",
+            "Tu-134",
+            "Tu-154",
+            "Yak-42"
+        ]
+    }
+}

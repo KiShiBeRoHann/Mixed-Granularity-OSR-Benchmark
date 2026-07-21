@@ -1,0 +1,189 @@
+{
+    "seed": 44,
+    "coarse_groups": {
+        "large_carnivores": {
+            "seen": [
+                "tiger",
+                "leopard",
+                "bear"
+            ],
+            "unseen": [
+                "wolf",
+                "lion"
+            ]
+        },
+        "people": {
+            "seen": [
+                "man",
+                "woman",
+                "baby"
+            ],
+            "unseen": [
+                "boy",
+                "girl"
+            ]
+        },
+        "reptiles": {
+            "seen": [
+                "snake",
+                "lizard",
+                "dinosaur"
+            ],
+            "unseen": [
+                "crocodile",
+                "turtle"
+            ]
+        },
+        "large_natural_outdoor_scenes": {
+            "seen": [
+                "plain",
+                "forest",
+                "sea"
+            ],
+            "unseen": [
+                "mountain",
+                "cloud"
+            ]
+        },
+        "flowers": {
+            "seen": [
+                "tulip",
+                "rose",
+                "poppy"
+            ],
+            "unseen": [
+                "orchid",
+                "sunflower"
+            ]
+        }
+    },
+    "fine_groups": {
+        "medium_mammals": {
+            "seen": [
+                "possum",
+                "raccoon",
+                "fox"
+            ],
+            "ood": [
+                "skunk",
+                "porcupine"
+            ]
+        },
+        "insects": {
+            "seen": [
+                "butterfly",
+                "cockroach",
+                "caterpillar"
+            ],
+            "ood": [
+                "bee",
+                "beetle"
+            ]
+        },
+        "large_man-made_outdoor_things": {
+            "seen": [
+                "skyscraper",
+                "road",
+                "castle"
+            ],
+            "ood": [
+                "house",
+                "bridge"
+            ]
+        },
+        "large_omnivores_and_herbivores": {
+            "seen": [
+                "chimpanzee",
+                "kangaroo",
+                "camel"
+            ],
+            "ood": [
+                "cattle",
+                "elephant"
+            ]
+        },
+        "fish": {
+            "seen": [
+                "flatfish",
+                "aquarium_fish",
+                "trout"
+            ],
+            "ood": [
+                "ray",
+                "shark"
+            ]
+        }
+    },
+    "far_ood_structure": {
+        "vehicles_2": [
+            "lawn_mower",
+            "rocket",
+            "streetcar",
+            "tank",
+            "tractor"
+        ],
+        "aquatic_mammals": [
+            "beaver",
+            "dolphin",
+            "otter",
+            "seal",
+            "whale"
+        ],
+        "fruit_and_vegetables": [
+            "apple",
+            "mushroom",
+            "orange",
+            "pear",
+            "sweet_pepper"
+        ],
+        "vehicles_1": [
+            "bicycle",
+            "bus",
+            "motorcycle",
+            "pickup_truck",
+            "train"
+        ],
+        "household_electrical_devices": [
+            "clock",
+            "keyboard",
+            "lamp",
+            "telephone",
+            "television"
+        ],
+        "furniture": [
+            "bed",
+            "chair",
+            "couch",
+            "table",
+            "wardrobe"
+        ],
+        "food_containers": [
+            "bottle",
+            "bowl",
+            "can",
+            "cup",
+            "plate"
+        ],
+        "trees": [
+            "maple_tree",
+            "oak_tree",
+            "palm_tree",
+            "pine_tree",
+            "willow_tree"
+        ],
+        "small_mammals": [
+            "hamster",
+            "mouse",
+            "rabbit",
+            "shrew",
+            "squirrel"
+        ],
+        "non-insect_invertebrates": [
+            "crab",
+            "lobster",
+            "snail",
+            "spider",
+            "worm"
+        ]
+    }
+}

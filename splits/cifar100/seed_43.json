@@ -1,0 +1,189 @@
+{
+    "seed": 43,
+    "coarse_groups": {
+        "large_carnivores": {
+            "seen": [
+                "wolf",
+                "lion",
+                "bear"
+            ],
+            "unseen": [
+                "leopard",
+                "tiger"
+            ]
+        },
+        "non-insect_invertebrates": {
+            "seen": [
+                "lobster",
+                "snail",
+                "worm"
+            ],
+            "unseen": [
+                "spider",
+                "crab"
+            ]
+        },
+        "furniture": {
+            "seen": [
+                "couch",
+                "wardrobe",
+                "bed"
+            ],
+            "unseen": [
+                "table",
+                "chair"
+            ]
+        },
+        "flowers": {
+            "seen": [
+                "poppy",
+                "orchid",
+                "sunflower"
+            ],
+            "unseen": [
+                "rose",
+                "tulip"
+            ]
+        },
+        "household_electrical_devices": {
+            "seen": [
+                "keyboard",
+                "lamp",
+                "television"
+            ],
+            "unseen": [
+                "clock",
+                "telephone"
+            ]
+        }
+    },
+    "fine_groups": {
+        "food_containers": {
+            "seen": [
+                "can",
+                "plate",
+                "cup"
+            ],
+            "ood": [
+                "bottle",
+                "bowl"
+            ]
+        },
+        "trees": {
+            "seen": [
+                "oak_tree",
+                "pine_tree",
+                "willow_tree"
+            ],
+            "ood": [
+                "maple_tree",
+                "palm_tree"
+            ]
+        },
+        "aquatic_mammals": {
+            "seen": [
+                "otter",
+                "dolphin",
+                "seal"
+            ],
+            "ood": [
+                "beaver",
+                "whale"
+            ]
+        },
+        "small_mammals": {
+            "seen": [
+                "hamster",
+                "mouse",
+                "shrew"
+            ],
+            "ood": [
+                "squirrel",
+                "rabbit"
+            ]
+        },
+        "vehicles_1": {
+            "seen": [
+                "motorcycle",
+                "pickup_truck",
+                "bicycle"
+            ],
+            "ood": [
+                "train",
+                "bus"
+            ]
+        }
+    },
+    "far_ood_structure": {
+        "insects": [
+            "bee",
+            "beetle",
+            "butterfly",
+            "caterpillar",
+            "cockroach"
+        ],
+        "vehicles_2": [
+            "lawn_mower",
+            "rocket",
+            "streetcar",
+            "tank",
+            "tractor"
+        ],
+        "medium_mammals": [
+            "fox",
+            "porcupine",
+            "possum",
+            "raccoon",
+            "skunk"
+        ],
+        "reptiles": [
+            "crocodile",
+            "dinosaur",
+            "lizard",
+            "snake",
+            "turtle"
+        ],
+        "large_natural_outdoor_scenes": [
+            "cloud",
+            "forest",
+            "mountain",
+            "plain",
+            "sea"
+        ],
+        "large_omnivores_and_herbivores": [
+            "camel",
+            "cattle",
+            "chimpanzee",
+            "kangaroo",
+            "elephant"
+        ],
+        "people": [
+            "baby",
+            "boy",
+            "girl",
+            "man",
+            "woman"
+        ],
+        "fruit_and_vegetables": [
+            "apple",
+            "mushroom",
+            "orange",
+            "pear",
+            "sweet_pepper"
+        ],
+        "large_man-made_outdoor_things": [
+            "bridge",
+            "castle",
+            "house",
+            "road",
+            "skyscraper"
+        ],
+        "fish": [
+            "aquarium_fish",
+            "flatfish",
+            "ray",
+            "shark",
+            "trout"
+        ]
+    }
+}
