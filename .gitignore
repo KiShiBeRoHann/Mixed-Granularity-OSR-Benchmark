@@ -1,5 +1,7 @@
 
-datasets/
+datasets/*
+!datasets/*.py
+!datasets/*.txt
 data/
 Dassl.pytorch/
 A2Pt/
