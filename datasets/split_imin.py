@@ -4,6 +4,9 @@ import random
 from torch.utils.data import Dataset
 from PIL import Image
 
+# 锚定脚本所在目录，保证在不同机器上路径都正确
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 class TreeSubDataset(Dataset):
     def __init__(self, data_list, transform=None):
         self.data_list = data_list
@@ -57,7 +60,7 @@ class TreeBasedMixedGranularity:
         # 🌟 模式 B: iNaturalist 2021 Mini (train_mini/文件夹名/图片)
         elif self.dataset_name == 'inaturalist':
             # 🚀 核心修复：强行锁定 2021 Mini 的真实物理路径！
-            real_inat_root = '/home/geng/WTY/datasets/iNaturalist2021_Mini'
+            real_inat_root = os.path.join(BASE_DIR, 'iNaturalist2021_Mini')
             
             # 读取官方 JSON，建立：文件夹长名 -> 种(物种短名) 的绝对安全映射
             mapping_file = os.path.join(real_inat_root, 'train_mini.json')

@@ -13,7 +13,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr
+from utils import calculate_cvr_unr, calculate_oscr
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -110,42 +110,47 @@ def main():
     criterion = nn.CrossEntropyLoss()
 
     method_name = "ARPL+CS"
-    print(f"\nStart {method_name} Training for {args.epochs} epochs...")
-    for epoch in range(args.epochs):
-        model.train()
-        for images, labels in tqdm(loaders['train'], desc=f"Epoch {epoch+1}/{args.epochs}", leave=False):
-            images, labels = images.to(device), labels.to(device)
-            
-            logits, feat = model(images, return_feat=True)
-            loss_arpl = criterion(logits, labels)
-            
-            feat_adv = feat.detach().clone().requires_grad_(True)
-            loss_adv_gen = criterion(model.compute_logits_from_feat(feat_adv), labels)
-            grad = torch.autograd.grad(loss_adv_gen, feat_adv)[0]
-            
-            feat_cs = feat_adv + 0.1 * grad.sign()
-            feat_cs = feat_cs / (feat_cs.norm(dim=-1, keepdim=True) + 1e-5)
-            
-            logits_cs = model.compute_logits_from_feat(feat_cs.detach())
-            loss_cs = -torch.mean(torch.sum(F.log_softmax(logits_cs, dim=1), dim=1)) / num_classes
-            
-            loss = loss_arpl + 0.1 * loss_cs
-            
-            optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
-        scheduler.step()
-
     model_dir = f"./models/{args.dataset}/L{args.num_layers}/seed_{args.seed}"
     os.makedirs(model_dir, exist_ok=True)
-    status_str = "Unseen_In_Train" if args.include_unseen else "Pure_Closed_Set"
-    model_path = os.path.join(model_dir, f"ARPL_{status_str}_weights.pth")
-    
-    torch.save(model.state_dict(), model_path)
-    print(f"\n[+] ARPL+CS 训练完成！权重已保存至: {model_path}")
+    unseen_tag = "Unseen_In_Train" if args.include_unseen else "Pure_Closed_Set"
+    model_path = os.path.join(model_dir, f"ARPL_{unseen_tag}_weights.pth")
 
-    # ================= 严谨评估模块 =================
+    # 训练或加载权重逻辑
+    if os.path.exists(model_path):
+        print(f"\n[+] 发现已保存的模型权重，直接加载: {model_path}")
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    else:
+        print(f"\n[!] 未发现缓存权重，开始 {method_name} [{unseen_tag} 设定] 的训练...")
+        for epoch in range(args.epochs):
+            model.train()
+            for images, labels in tqdm(loaders['train'], desc=f"Epoch {epoch+1}/{args.epochs}", leave=False):
+                images, labels = images.to(device), labels.to(device)
+                
+                logits, feat = model(images, return_feat=True)
+                loss_arpl = criterion(logits, labels)
+                
+                feat_adv = feat.detach().clone().requires_grad_(True)
+                loss_adv_gen = criterion(model.compute_logits_from_feat(feat_adv), labels)
+                grad = torch.autograd.grad(loss_adv_gen, feat_adv)[0]
+                
+                feat_cs = feat_adv + 0.1 * grad.sign()
+                feat_cs = feat_cs / (feat_cs.norm(dim=-1, keepdim=True) + 1e-5)
+                
+                logits_cs = model.compute_logits_from_feat(feat_cs.detach())
+                loss_cs = -torch.mean(torch.sum(F.log_softmax(logits_cs, dim=1), dim=1)) / num_classes
+                
+                loss = loss_arpl + 0.1 * loss_cs
+                
+                optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+            scheduler.step()
+
+        torch.save(model.state_dict(), model_path)
+        print(f"\n[+] 训练完成！模型权重已永久保存至: {model_path}")
+
+# ================= 严谨评估模块 =================
     print("\n" + "="*50)
     print(f"STARTING STANDALONE {method_name} EVALUATION")
     print("="*50)
@@ -190,7 +195,10 @@ def main():
         print(f"Coarse Gen Acc (Maker):  {safe_acc(c_gen_preds, c_gen_targets)}")
         print(f"Medium Gen Acc (Family): {safe_acc(m_gen_preds, m_gen_targets)}")
         print("-" * 45)
-        print(f"Strict Global AUROC:       {get_auroc(np.concatenate([near_fam_scores, near_var_scores, far_scores]))}")
+        
+        # 【修复1】：提前定义 all_neg，供下面复用
+        all_neg = np.concatenate([near_fam_scores, near_var_scores, far_scores])
+        print(f"Strict Global AUROC:       {get_auroc(all_neg)}")
         print(f"Near-Family AUROC (跨族):  {get_auroc(near_fam_scores)}")
         print(f"Near-Variant AUROC (同族): {get_auroc(near_var_scores)}")
         print(f"Strict Far AUROC (隔离):   {get_auroc(far_scores)}")
@@ -198,9 +206,34 @@ def main():
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="ARPL+CS")
         
         if len(near_fam_scores) > 0:
-            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="ARPL+CS")
-
-
+            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="ARPL+CS")       
+        
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"OSCR 综合指标评估")
+        
+        # 1. Global OSCR
+        # 【修复2】：这里应该是 c_gen 和 m_gen，而不是 gen_scores
+        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"Global OSCR: {global_oscr:.2f}%")
+        
+        # 2. MG-OSCR (混合粒度边界对抗)
+        # 【修复3】：使用细分数据集专有的变量名 c_gen 和 near_var
+        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
+            mg_correct_mask = (c_gen_preds == c_gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=c_gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_var_scores
+            )
+            print(f"MG-OSCR: {mg_oscr:.2f}%")
+        # -------------------------------------------------------
 
     elif args.dataset == 'cifar100':
         gen_scores, gen_preds, gen_targets = collect_scores(loaders['test_coarse_gen'])
@@ -215,10 +248,37 @@ def main():
         print(f"Global Acc:  {global_acc:.2f}%")
         print(f"Gen Acc: {safe_acc(gen_preds, gen_targets)}")
         print("-" * 45)
-        print(f"Strict Global AUROC: {get_auroc(np.concatenate([near_scores, far_scores]))}")
+        
+        # 【修复4】：在打印前显式定义 all_neg
+        all_neg = np.concatenate([near_scores, far_scores])
+        print(f"Strict Global AUROC: {get_auroc(all_neg)}")
 
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="ARPL+CS") 
-
-
+        
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"OSCR 综合指标评估")
+        
+        # 1. Global OSCR
+        global_id_scores = np.concatenate([id_scores, gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"Global OSCR: {global_oscr:.2f}%")
+        
+        # 2. MG-OSCR (混合粒度边界对抗)
+        if len(gen_scores) > 0 and len(near_scores) > 0:
+            mg_correct_mask = (gen_preds == gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_scores
+            )
+            print(f"MG-OSCR: {mg_oscr:.2f}%")
+        # -------------------------------------------------------
+        
 if __name__ == "__main__":
     main()

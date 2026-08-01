@@ -34,7 +34,7 @@ else
 fi
 
 if [ "$DATASET" == "cifar100" ]; then
-    SEEDS=(42 43 44 45)
+    SEEDS=(42 43 44 45 46)
 else
     SEEDS=(42 43 44 45 46)
 fi

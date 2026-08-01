@@ -10,7 +10,7 @@ from datasets import get_mixed_granularity_loaders
 import json
 import os
 
-from utils import calculate_cvr_unr
+from utils import calculate_cvr_unr, calculate_oscr
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -149,6 +149,35 @@ def main():
         if len(near_fam_scores) > 0:
             calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="A2Pt")
 
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"[ZeroShotCLIP] OSCR 综合指标评估")
+        
+        all_neg = np.concatenate([near_fam_scores, near_var_scores, far_scores])
+        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
+        
+        # 计算全局正确性布尔数组
+        global_correct_mask = (total_id_preds == total_id_targets)
+        
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"[ZeroShotCLIP] Global OSCR: {global_oscr:.2f}%")
+        
+        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
+            # 计算混合粒度的正确性布尔数组
+            mg_correct_mask = (c_gen_preds == c_gen_targets)
+            
+            mg_oscr = calculate_oscr(
+                pred_k_id=c_gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_var_scores
+            )
+            print(f"[ZeroShotCLIP] MG-OSCR    : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
+
 
     elif args.dataset == 'cifar100':
         gen_scores, gen_preds, gen_targets = collect_scores(loaders['test_coarse_gen'])
@@ -165,6 +194,35 @@ def main():
         print("-" * 45)
         print(f"Strict Global AUROC: {get_auroc(np.concatenate([near_scores, far_scores]))}")
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="A2Pt") 
+
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"[ZeroShotCLIP] OSCR 综合指标评估")
         
+        all_neg = np.concatenate([near_scores, far_scores])
+        global_id_scores = np.concatenate([id_scores, gen_scores])
+        
+        # 计算全局正确性布尔数组
+        global_correct_mask = (total_id_preds == total_id_targets)
+        
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"[ZeroShotCLIP] Global OSCR: {global_oscr:.2f}%")
+        
+        if len(gen_scores) > 0 and len(near_scores) > 0:
+            # 计算混合粒度的正确性布尔数组
+            mg_correct_mask = (gen_preds == gen_targets)
+            
+            mg_oscr = calculate_oscr(
+                pred_k_id=gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_scores
+            )
+            print(f"[ZeroShotCLIP] MG-OSCR    : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
+
 if __name__ == '__main__':
     main()

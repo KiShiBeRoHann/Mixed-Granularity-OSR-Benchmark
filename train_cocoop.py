@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 # 导入统一的数据工厂和插件
 # =========================================================
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr, calculate_ifcr, evaluate_fine_grained_ood, visualize_fine_grained
+from utils import calculate_cvr_unr, calculate_oscr
 
 # =========================================================
 # 0. 绝对严谨的随机种子锁死 (确保 Baseline 的完美复现)
@@ -284,8 +284,8 @@ def main():
         torch.save(model.state_dict(), model_path)
         print(f"\n[+] 训练完成！模型权重已保存至: {model_path}")
 
-    # =========================================================
-    # 3. 严谨评估模块 
+# =========================================================
+    #  严谨评估模块 
     # =========================================================
     print("\n" + "="*50)
     print(f"STARTING STANDALONE {method_name} DEDICATED EVALUATION")
@@ -366,6 +366,28 @@ def main():
         if len(near_fam_scores) > 0:
             calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="COCOOP")
 
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"[COCOOP] OSCR 综合指标评估")
+        
+        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"[COCOOP] Global OSCR: {global_oscr:.2f}%")
+        
+        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
+            mg_correct_mask = (c_gen_preds == c_gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=c_gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_var_scores
+            )
+            print(f"[COCOOP] MG-OSCR    : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
 
 
     elif args.dataset == 'cifar100':
@@ -387,7 +409,7 @@ def main():
 
         status = "Seen" if args.include_unseen else "Unseen"
         
-        print(f"\n{'='*15} {method_name} Results ({args.dataset.capitalize()}) {'='*15}")
+        print(f"\n{'='*15} {method_name} Results (CIFAR-100) {'='*15}")
         print(f"Global Acc:  {global_acc:.2f}%")
         print(f"Gen Acc ({status}): {gen_acc_str}")
         print("-" * 45)
@@ -395,6 +417,28 @@ def main():
 
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="COCOOP") 
 
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"[COCOOP] OSCR 综合指标评估")
+        
+        global_id_scores = np.concatenate([id_scores, gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"[COCOOP] Global OSCR: {global_oscr:.2f}%")
+        
+        if len(gen_scores) > 0 and len(near_scores) > 0:
+            mg_correct_mask = (gen_preds == gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_scores
+            )
+            print(f"[COCOOP] MG-OSCR    : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
 
 if __name__ == "__main__":
     main()

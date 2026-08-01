@@ -17,3 +17,6 @@ __pycache__/
 experiment_logs/
 models/
 pictures/
+# 本机/临时文件，勿提交
+nohup.out
+reasonix.toml

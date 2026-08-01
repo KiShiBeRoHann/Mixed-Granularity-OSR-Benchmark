@@ -13,7 +13,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr
+from utils import calculate_cvr_unr,calculate_oscr
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -233,7 +233,7 @@ def main():
         torch.save(state_to_save, model_path)
         print(f"\n[+] DeF 阶段二完成！Backbone 与 Classifier 权重已打包保存至: {model_path}")
 
-    # ================= 严谨评估模块 =================
+# ================= 严谨评估模块 =================
     print("\n" + "="*50)
     print(f"STARTING STANDALONE {method_name} EVALUATION")
     print("="*50)
@@ -290,6 +290,30 @@ def main():
         if len(near_fam_scores) > 0:
             calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="DEF")
 
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"[DEF] OSCR 综合指标评估")
+        
+        all_neg = np.concatenate([near_fam_scores, near_var_scores, far_scores])
+        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"[DEF] Global OSCR: {global_oscr:.2f}%")
+        
+        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
+            mg_correct_mask = (c_gen_preds == c_gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=c_gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_var_scores
+            )
+            print(f"[DEF] MG-OSCR    : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
+
 
     elif args.dataset == 'cifar100':
         gen_scores, gen_preds, gen_targets = collect_scores(loaders['test_coarse_gen'])
@@ -308,6 +332,29 @@ def main():
 
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="DEF") 
 
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"[DEF] OSCR 综合指标评估")
+        
+        all_neg = np.concatenate([near_scores, far_scores])
+        global_id_scores = np.concatenate([id_scores, gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"[DEF] Global OSCR: {global_oscr:.2f}%")
+        
+        if len(gen_scores) > 0 and len(near_scores) > 0:
+            mg_correct_mask = (gen_preds == gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_scores
+            )
+            print(f"[DEF] MG-OSCR    : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
 
 
 if __name__ == "__main__":

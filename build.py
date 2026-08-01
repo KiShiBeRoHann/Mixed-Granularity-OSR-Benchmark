@@ -204,17 +204,20 @@ def build_mutually_exclusive_split(txt_file, dataset_name, num_layers=2, target_
 
 if __name__ == '__main__':
     # 🌟 融合核心 3：通过配置字典，完美实现不同数据集的动态路由！
+    # 使用脚本所在目录锚定路径，保证在任何机器/任何工作目录下运行都能找到数据
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
     dataset_configs = [
         {
             'ds': 'imagenet', 
-            'txt': '/home/geng/WTY/datasets/imagenet_tree.txt', 
+            'txt': os.path.join(BASE_DIR, 'datasets', 'imagenet_tree.txt'), 
             'heads': 60, 
             'max_leaves': 20, 
             'max_subtrees': 80
         },
         {
             'ds': 'inaturalist', 
-            'txt': '/home/geng/WTY/datasets/inaturalist_2021.txt', 
+            'txt': os.path.join(BASE_DIR, 'datasets', 'inaturalist_2021.txt'), 
             'heads': 200, 
             'max_leaves': 500, 
             'max_subtrees': 500  # iNat 需要大量子树备选，设定为 2.5 * heads

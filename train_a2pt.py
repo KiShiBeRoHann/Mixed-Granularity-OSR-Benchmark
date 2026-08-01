@@ -12,7 +12,7 @@ import clip
 
 # 导入统一的数据工厂和插件
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_ifcr, evaluate_fine_grained_ood, visualize_fine_grained, calculate_cvr_unr
+from utils import calculate_oscr, calculate_cvr_unr
 
 def set_seed(seed=1):
     import random
@@ -364,12 +364,37 @@ def main():
         print(f"Near-Family AUROC (跨族):  {near_fam_auroc}")
         print(f"Near-Variant AUROC (同族): {near_var_auroc}")
         print(f"Strict Far AUROC (隔离):   {far_auroc}")
-        
 
+        # 计算并打印阈值依赖指标
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="A2Pt")
         
         if len(near_fam_scores) > 0:
             calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="A2Pt")
+
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"OSCR 综合指标评估")
+        
+        # 1. Global OSCR
+        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"Global OSCR : {global_oscr:.2f}%")
+        
+        # 2. MG-OSCR (混合粒度边界对抗) - 取最容易混淆的 c_gen 和 near_var
+        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
+            mg_correct_mask = (c_gen_preds == c_gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=c_gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_var_scores
+            )
+            print(f"MG-OSCR     : {mg_oscr:.2f}%")
+        # -------------------------------------------------------
 
         np.save(os.path.join(model_dir, "A2Pt_id_scores.npy"), id_scores)
         np.save(os.path.join(model_dir, "A2Pt_gen_scores.npy"), c_gen_scores)
@@ -402,10 +427,35 @@ def main():
         
 
         calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="A2Pt") 
-
+        
+        # ------------------- 增加 OSCR 评估 -------------------
+        print("-" * 45)
+        print(f"OSCR 综合指标评估")
+        
+        # 1. Global OSCR
+        global_id_scores = np.concatenate([id_scores, gen_scores])
+        global_correct_mask = (total_id_preds == total_id_targets)
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=global_correct_mask,
+            pred_u_ood=all_neg
+        )
+        print(f"Global OSCR: {global_oscr:.2f}%")
+        
+        # 2. MG-OSCR (混合粒度边界对抗)
+        if len(gen_scores) > 0 and len(near_scores) > 0:
+            mg_correct_mask = (gen_preds == gen_targets)
+            mg_oscr = calculate_oscr(
+                pred_k_id=gen_scores,
+                x_k_id=mg_correct_mask,
+                pred_u_ood=near_scores
+            )
+            print(f"MG-OSCR: {mg_oscr:.2f}%")
+        # -------------------------------------------------------
+        
         np.save(os.path.join(model_dir, "A2Pt_id_scores.npy"), id_scores)
-        np.save(os.path.join(model_dir, "A2Pt_gen_scores.npy"), c_gen_scores)
-        np.save(os.path.join(model_dir, "A2Pt_near_ood_scores.npy"), near_var_scores)
+        np.save(os.path.join(model_dir, "A2Pt_gen_scores.npy"), gen_scores)      
+        np.save(os.path.join(model_dir, "A2Pt_near_ood_scores.npy"), near_scores) 
 
     
 
