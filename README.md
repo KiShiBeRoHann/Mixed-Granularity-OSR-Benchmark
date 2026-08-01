@@ -13,8 +13,10 @@
 ### 1. 克隆代码
 
 ```bash
-git clone https://github.com/KiShiBeRoHann/Mixed-Granularity-OSR-Benchmark.git wty
-cd wty
+# 克隆到当前目录下的 Mixed-Granularity-OSR-Benchmark/ 文件夹
+# （如需指定其他目录名，可在末尾追加参数，如：git clone <url> my_osr_benchmark）
+git clone https://github.com/KiShiBeRoHann/Mixed-Granularity-OSR-Benchmark.git
+cd Mixed-Granularity-OSR-Benchmark
 ```
 
 > 项目内所有路径均为相对路径（锚定在项目根目录 / 脚本所在目录），克隆到任意位置均可直接运行。
@@ -22,8 +24,9 @@ cd wty
 ### 2. 创建 conda 环境并安装依赖
 
 ```bash
-conda create -n wty python=3.8 -y
-conda activate wty
+# 环境名统一用 dassl（与仓库内 Dassl 工具链命名一致），可自行换成其他名字
+conda create -n dassl python=3.8 -y
+conda activate dassl
 
 # PyTorch（CUDA 版，按你的 CUDA 版本选择，此处以 11.8 为例）
 conda install pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia
