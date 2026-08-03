@@ -98,6 +98,7 @@ class CustomCLIP_FSMoE(nn.Module):
     def __init__(self, classnames, clip_model, num_layers=12, prompt_len=8, top_k=5):
         super().__init__()
         self.n_cls = len(classnames)
+        self.num_layers = num_layers
         self.dtype = clip_model.dtype
         self.prompt_dim = clip_model.ln_final.weight.shape[0] 
         self.vis_hidden_dim = clip_model.visual.positional_embedding.shape[1] 
@@ -133,17 +134,25 @@ class CustomCLIP_FSMoE(nn.Module):
         self.register_buffer("token_prefix", embedding[:, :1, :])  
         self.register_buffer("token_suffix", embedding[:, 1 + 2 * prompt_len:, :])
 
-        self.intermediate_features = []
-        def get_activation():
-            def hook(model, input, output):
-                self.intermediate_features.append(output.permute(1, 0, 2)[:, 0, :])
-            return hook
-        
-        for i in range(num_layers - 1): 
-            self.image_encoder.transformer.resblocks[i].register_forward_hook(get_activation())
+        # 中间层特征不再在 __init__ 静态注册 hook：
+        # 静态闭包 hook 在 DataParallel 深拷贝复制模型时会绑定到原模型实例，
+        # 导致 replica 上收集不到特征（low_level_feats 为空）。改为 forward 内动态注册。
 
     def forward(self, image):
+        # 清理上次可能残留的 hook（防止重复收集）
+        for h in getattr(self, '_fsmoe_hook_handles', []):
+            h.remove()
         self.intermediate_features = []
+        # 动态注册中间层 hook：闭包绑定到当前 self，兼容 DataParallel（replica 各自独立收集）
+        hook_handles = []
+        for i in range(self.num_layers - 1):
+            def make_hook():
+                def hook(module, input, output):
+                    self.intermediate_features.append(output.permute(1, 0, 2)[:, 0, :])
+                return hook
+            hook_handles.append(self.image_encoder.transformer.resblocks[i].register_forward_hook(make_hook()))
+        self._fsmoe_hook_handles = hook_handles
+
         # FP16 提取特征
         F_L = self.image_encoder(image.type(self.dtype)) 
         B = F_L.shape[0]
