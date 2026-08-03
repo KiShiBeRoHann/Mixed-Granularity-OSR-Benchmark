@@ -252,6 +252,11 @@ def main():
 
     model = CustomCLIP_FSMoE(classnames=clean_classnames, clip_model=clip_model).to(device)
     
+    # 多卡并行：检测到 2+ 张 GPU 时自动启用 DataParallel（单卡无影响）
+    if torch.cuda.device_count() > 1:
+        print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
+        model = nn.DataParallel(model)
+    
     for name, param in model.named_parameters():
         if "P_l" not in name and "P_h" not in name and "moe" not in name and "high_level_proj" not in name:
             param.requires_grad = False
