@@ -13,7 +13,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr,calculate_oscr
+from utils import calculate_cvr_unr,calculate_oscr, state_dict_of, load_state_dict_into
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -89,6 +89,11 @@ def main():
 
 
     model = get_vgg_adaptive(num_classes=num_classes).to(device)
+    
+    # 多卡并行：检测到 2+ 张 GPU 时自动启用 DataParallel（单卡无影响）
+    if torch.cuda.device_count() > 1:
+        print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
+        model = nn.DataParallel(model)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     criterion = nn.CrossEntropyLoss()
@@ -103,7 +108,7 @@ def main():
 
     if os.path.exists(model_path):
         print(f"\n[+] 发现已保存的模型权重，直接加载: {model_path}")
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        load_state_dict_into(model, torch.load(model_path, map_location=device))
     else:
         print(f"\n[!] 未发现缓存权重，开始 {method_name} [{unseen_tag} 设定] 的训练...")
         for epoch in range(args.epochs):
@@ -119,7 +124,7 @@ def main():
             scheduler.step()
 
     
-        torch.save(model.state_dict(), model_path)
+        torch.save(state_dict_of(model), model_path)
         print(f"\n[+] 训练完成！模型权重已永久保存至: {model_path}")
 
     

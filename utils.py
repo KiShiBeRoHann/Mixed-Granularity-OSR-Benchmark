@@ -24,6 +24,21 @@ import seaborn as sns
 from sklearn.manifold import TSNE
 
 
+def state_dict_of(model):
+    """取模型 state_dict；模型被 DataParallel 包装时自动解包（去掉 module. 前缀），保证保存格式与单卡一致"""
+    if isinstance(model, nn.DataParallel):
+        return model.module.state_dict()
+    return model.state_dict()
+
+
+def load_state_dict_into(model, state_dict):
+    """加载 state_dict 到模型；自动兼容 DataParallel 包装的模型"""
+    if isinstance(model, nn.DataParallel):
+        model.module.load_state_dict(state_dict)
+    else:
+        model.load_state_dict(state_dict)
+
+
 def calculate_cvr_unr(id_scores, coarse_gen_scores, near_ood_scores, tpr_target=0.95, method_name="Method"):
     """
     独立指标计算模块：计算已知类内未见变体拒绝率 (CV-RR) 、 未知近邻拒绝率 (UN-RR) 以及综合 H-Score

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 import clip
 from sklearn.metrics import roc_auc_score
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr,calculate_oscr
+from utils import calculate_cvr_unr,calculate_oscr, state_dict_of, load_state_dict_into
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -99,6 +99,11 @@ def main():
     print(f"-> Tail Names: {clean_classnames[-3:]}\n")
 
     model = LinearProbeCLIP(clip_model=clip_model, num_classes=num_classes).to(device)
+    
+    # 多卡并行：检测到 2+ 张 GPU 时自动启用 DataParallel（单卡无影响）
+    if torch.cuda.device_count() > 1:
+        print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
+        model = nn.DataParallel(model)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss()
 
@@ -112,7 +117,7 @@ def main():
     # 训练或加载权重逻辑
     if os.path.exists(model_path):
         print(f"\n[+] 发现已保存的模型权重，直接加载: {model_path}")
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        load_state_dict_into(model, torch.load(model_path, map_location=device))
     else:
         print(f"\n[!] 未发现缓存权重，开始 {method_name} [{unseen_tag} 设定] 的训练...")
         for epoch in range(args.epochs):
@@ -127,7 +132,7 @@ def main():
                 optimizer.step()
                 total_loss += loss.item()
     
-        torch.save(model.state_dict(), model_path)
+        torch.save(state_dict_of(model), model_path)
         print(f"\n[+] 训练完成！模型权重已永久保存至: {model_path}")
     
 # ================= 严谨评估模块 =================

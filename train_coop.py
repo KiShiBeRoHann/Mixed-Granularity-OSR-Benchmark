@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 # 导入统一的数据工厂和插件
 # =========================================================
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr, calculate_oscr
+from utils import calculate_cvr_unr, calculate_oscr, state_dict_of, load_state_dict_into
 
 
 # =========================================================
@@ -191,6 +191,11 @@ def main():
 
 
     model = CustomCLIP_CoOp(classnames=clean_classnames, clip_model=clip_model).to(device)
+    
+    # 多卡并行：检测到 2+ 张 GPU 时自动启用 DataParallel（单卡无影响）
+    if torch.cuda.device_count() > 1:
+        print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
+        model = nn.DataParallel(model)
     optimizer = optim.SGD(model.prompt_learner.parameters(), lr=0.002, momentum=0.9)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     criterion = nn.CrossEntropyLoss()
@@ -205,7 +210,7 @@ def main():
     # 训练或加载权重逻辑
     if os.path.exists(model_path):
         print(f"\n[+] 发现已保存的模型权重，直接加载: {model_path}")
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        load_state_dict_into(model, torch.load(model_path, map_location=device))
     else:
         print(f"\n[!] 未发现缓存权重，开始 {method_name} [{unseen_tag} 设定] 的训练...")
         for epoch in range(args.epochs):
@@ -229,7 +234,7 @@ def main():
                 
             scheduler.step()
         
-        torch.save(model.state_dict(), model_path)
+        torch.save(state_dict_of(model), model_path)
         print(f"\n[+] 训练完成！模型权重已保存至: {model_path}")
 
 # =========================================================

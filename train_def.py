@@ -13,7 +13,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr,calculate_oscr
+from utils import calculate_cvr_unr,calculate_oscr, state_dict_of, load_state_dict_into
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -144,6 +144,11 @@ def main():
 
     backbone, feat_dim = get_vgg32_backbone()
     backbone = backbone.to(device)
+    
+    # 多卡并行：检测到 2+ 张 GPU 时自动启用 DataParallel（单卡无影响）
+    if torch.cuda.device_count() > 1:
+        print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
+        backbone = nn.DataParallel(backbone)
     proj_head = ProjectionHead(feat_dim, 128).to(device)
     
     target_etf = get_etf_target(num_classes, device)
@@ -164,7 +169,7 @@ def main():
     if os.path.exists(model_path):
         print(f"\n[+] 发现已保存的模型权重，跳过训练，直接加载: {model_path}")
         checkpoint = torch.load(model_path, map_location=device)
-        backbone.load_state_dict(checkpoint['backbone'])
+        load_state_dict_into(backbone, checkpoint['backbone'])
         classifier.load_state_dict(checkpoint['classifier'])
         
         # 加载完成后务必冻结 backbone 并切换至 eval 模式
@@ -227,7 +232,7 @@ def main():
 
         # 打包保存
         state_to_save = {
-            'backbone': backbone.state_dict(),
+            'backbone': state_dict_of(backbone),
             'classifier': classifier.state_dict()
         }
         torch.save(state_to_save, model_path)

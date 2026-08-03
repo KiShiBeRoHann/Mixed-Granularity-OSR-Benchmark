@@ -12,7 +12,7 @@ import clip
 
 # 导入统一的数据工厂和插件
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_oscr, calculate_cvr_unr
+from utils import calculate_oscr, calculate_cvr_unr, state_dict_of, load_state_dict_into
 
 def set_seed(seed=1):
     import random
@@ -226,6 +226,11 @@ def main():
 
 
     model = CustomCLIP_A2Pt(classnames=clean_classnames, clip_model=clip_model).to(device)
+    
+    # 多卡并行：检测到 2+ 张 GPU 时自动启用 DataParallel（单卡无影响）
+    if torch.cuda.device_count() > 1:
+        print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
+        model = nn.DataParallel(model)
 
     optimizer = optim.SGD([
         {'params': model.prompt_learner.parameters()},
@@ -250,7 +255,7 @@ def main():
 
     if os.path.exists(model_path):
         print(f"\n[+] 发现已保存的模型权重，跳过训练，直接加载: {model_path}")
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        load_state_dict_into(model, torch.load(model_path, map_location=device))
     else:
         print(f"\n[!] 未发现缓存权重，开始 {method_name} [{unseen_tag} 设定] 的训练...")
         
@@ -279,7 +284,7 @@ def main():
                 
             scheduler.step()
         
-        torch.save(model.state_dict(), model_path)
+        torch.save(state_dict_of(model), model_path)
         print(f"\n[+] 训练完成！模型权重已永久保存至: {model_path}")
 
     # =========================================================
