@@ -138,30 +138,45 @@ class CustomCLIP_FSMoE(nn.Module):
         # 静态闭包 hook 在 DataParallel 深拷贝复制模型时会绑定到原模型实例，
         # 导致 replica 上收集不到特征（low_level_feats 为空）。改为 forward 内动态注册。
 
-    def forward(self, image):
-        # 清理上次可能残留的 hook（防止重复收集）
-        for h in getattr(self, '_fsmoe_hook_handles', []):
-            h.remove()
-        self.intermediate_features = []
-        # 动态注册中间层 hook：闭包绑定到当前 self，兼容 DataParallel（replica 各自独立收集）
-        hook_handles = []
-        for i in range(self.num_layers - 1):
-            def make_hook():
-                def hook(module, input, output):
-                    self.intermediate_features.append(output.permute(1, 0, 2)[:, 0, :])
-                return hook
-            hook_handles.append(self.image_encoder.transformer.resblocks[i].register_forward_hook(make_hook()))
-        self._fsmoe_hook_handles = hook_handles
+    def _visual_forward_with_intermediate(self, x):
+        """显式遍历 CLIP 视觉 transformer 并收集中间层特征。
+        不依赖 forward hook，避免 DataParallel 多卡下 hook 闭包/设备错位问题。"""
+        v = self.image_encoder
+        x = v.conv1(x)
+        x = x.reshape(x.shape[0], x.shape[1], -1)
+        x = x.permute(0, 2, 1)
+        x = torch.cat([
+            v.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[2], dtype=x.dtype, device=x.device),
+            x
+        ], dim=1)
+        x = x + v.positional_embedding.to(x.dtype)
+        x = v.ln_pre(x)
+        x = x.permute(1, 0, 2)
+        intermediate = []
+        for i, block in enumerate(v.transformer.resblocks):
+            x = block(x)
+            if i < self.num_layers - 1:
+                intermediate.append(x.permute(1, 0, 2)[:, 0, :])
+        x = x.permute(1, 0, 2)
+        # 兼容不同版本 CLIP 的 ln_post / pooler 调用
+        if hasattr(v, 'pooler') and v.pooler is not None:
+            x = v.ln_post(x[:, 0], v.pooler)
+        else:
+            x = v.ln_post(x[:, 0])
+        if v.proj is not None:
+            x = x @ v.proj
+        return x, intermediate
 
-        # FP16 提取特征
-        F_L = self.image_encoder(image.type(self.dtype)) 
+    def forward(self, image):
+        # FP16 提取特征（显式 forward 收集中间层特征，兼容 DataParallel 多卡）
+        F_L, intermediate = self._visual_forward_with_intermediate(image.type(self.dtype))
         B = F_L.shape[0]
         
         # ==========================================
         # 🔌 将所有视觉特征升维到 FP32，防止运算下溢
         # ==========================================
         F_L_32 = F_L.float()
-        low_level_feats_32 = [f.float() for f in self.intermediate_features]
+        low_level_feats_32 = [f.float() for f in intermediate]
         
         V_l, routing_logits = self.moe(low_level_feats_32, F_L_32)
         V_h = self.high_level_proj(F_L_32)
