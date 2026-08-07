@@ -64,8 +64,9 @@ def main():
                 clean_names.append(raw_id.replace('_', ' '))
                 
     elif args.dataset in ['aircraft', 'inaturalist']:
-        # 🚀 Aircraft 和 iNat 2021 完美合并：直接切掉括号并替换下划线
-        clean_names = [name.split(' ')[0].replace('_', ' ') for name in classnames]
+        # 🚀 Aircraft 和 iNat 2021：类名去除层级标注括号（"Boeing 767 (Family)" -> "Boeing 767"）
+        # 注意不能按空格切（多个 Family 会重复成 "Boeing"），只去末尾括号标注
+        clean_names = [name.rsplit(' (', 1)[0].replace('_', ' ') for name in classnames]
         
     else:
         # 🚀 CIFAR-100 专属：绝对不能按空格切分！原样保留！
