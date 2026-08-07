@@ -228,9 +228,9 @@ def main():
                 clean_classnames.append(raw_id.replace('_', ' '))
                 
     elif args.dataset in ['aircraft', 'inaturalist']:
-        # 🚀 Aircraft 和 iNat 2021 完美合并：直接切掉括号并替换下划线
-        # 例如: "Eurybia_divaricata (F)" -> "Eurybia divaricata"
-        clean_classnames = [name.split(' ')[0].replace('_', ' ') for name in classnames]
+        # 🚀 Aircraft 和 iNat 2021：保留完整层级类名（如 "Boeing 767 (Family)"），
+        # 不能切空格！否则多个 Family 会被切成同一个 "Boeing"，类名重复导致评估错位
+        clean_classnames = [name.replace('_', ' ') for name in classnames]
         
     else:
         # 🚀 核心修复：CIFAR-100 绝对不能按空格切分！原样保留！
@@ -289,7 +289,7 @@ def main():
         torch.save(state_dict_of(model), model_path)
         print(f"\n[+] 训练完成！模型权重已保存至: {model_path}")
 
-# =========================================================
+    # =========================================================
     #  严谨评估模块 
     # =========================================================
     print("\n" + "="*50)

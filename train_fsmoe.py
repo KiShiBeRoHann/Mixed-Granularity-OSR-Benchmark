@@ -261,9 +261,9 @@ def main():
                 clean_classnames.append(raw_id.replace('_', ' '))
                 
     elif args.dataset in ['aircraft', 'inaturalist']:
-        # 🚀 Aircraft 和 iNat 2021 完美合并：直接切掉括号并替换下划线
-        # 例如: "Eurybia_divaricata (F)" -> "Eurybia divaricata"
-        clean_classnames = [name.split(' ')[0].replace('_', ' ') for name in classnames]
+        # 🚀 Aircraft 和 iNat 2021：保留完整层级类名（如 "Boeing 767 (Family)"），
+        # 不能切空格！否则多个 Family 会被切成同一个 "Boeing"，类名重复导致评估错位
+        clean_classnames = [name.replace('_', ' ') for name in classnames]
         
     else:
         # 🚀 核心修复：CIFAR-100 绝对不能按空格切分！原样保留！
@@ -289,7 +289,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
 
 
-    method_name = "FSMOE"
+    method_name = "FSMoE"
     model_dir = f"./models/{args.dataset}/L{args.num_layers}/seed_{args.seed}"
     os.makedirs(model_dir, exist_ok=True)
         
@@ -369,10 +369,10 @@ def main():
         print(f"Near-Variant AUROC (同族): {get_auroc(near_var_scores)}")
         print(f"Strict Far AUROC (隔离):   {get_auroc(far_scores)}")
 
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="FSMOE")
+        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="FSMoE")
         
         if len(near_fam_scores) > 0:
-            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="FSMOE")
+            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="FSMoE")
 
         # ------------------- 增加 OSCR 评估 -------------------
         print("-" * 45)
@@ -414,7 +414,7 @@ def main():
         print("-" * 45)
         print(f"Strict Global AUROC: {get_auroc(np.concatenate([near_scores, far_scores]))}")
 
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="FSMOE") 
+        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="FSMoE") 
 
         # ------------------- 增加 OSCR 评估 -------------------
         print("-" * 45)
