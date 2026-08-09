@@ -63,10 +63,10 @@ class TextEncoder(nn.Module):
         B_times_N = x.shape[0]
         B = B_times_N // N_cls
         
-        eos_indices = tokenized_prompts.argmax(dim=-1) # [N_cls]
+        eos_indices = tokenized_prompts.argmax(dim=-1).to(x.device) # [N_cls]
         eos_indices = eos_indices.repeat(B)            # [Batch * N_cls]
         
-        x = x[torch.arange(x.shape[0]), eos_indices] @ self.text_projection
+        x = x[torch.arange(x.shape[0], device=x.device), eos_indices] @ self.text_projection
         return x
 
 class CoCoOpPromptLearner(nn.Module):
