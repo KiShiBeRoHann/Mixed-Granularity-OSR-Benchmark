@@ -145,10 +145,10 @@ def main():
         print(f"Near-Family AUROC (跨族):  {get_auroc(near_fam_scores)}")
         print(f"Near-Variant AUROC (同族): {get_auroc(near_var_scores)}")
         print(f"Strict Far AUROC (隔离):   {get_auroc(far_scores)}")
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="A2Pt")
+        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="ZeroShotCLIP")
         
         if len(near_fam_scores) > 0:
-            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="A2Pt")
+            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="ZeroShotCLIP")
 
         # ------------------- 增加 OSCR 评估 -------------------
         print("-" * 45)
@@ -194,7 +194,7 @@ def main():
         print(f"Gen Acc: {safe_acc(gen_preds, gen_targets)}")
         print("-" * 45)
         print(f"Strict Global AUROC: {get_auroc(np.concatenate([near_scores, far_scores]))}")
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="A2Pt") 
+        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="ZeroShotCLIP") 
 
         # ------------------- 增加 OSCR 评估 -------------------
         print("-" * 45)

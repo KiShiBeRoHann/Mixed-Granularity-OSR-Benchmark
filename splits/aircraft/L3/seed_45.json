@@ -1,0 +1,315 @@
+{
+    "seed": 45,
+    "total_id_classes": 12,
+    "split_config": {
+        "coarse_id": [
+            {
+                "label": 0,
+                "head_name": "Fokker (Maker)",
+                "seen_variants": [
+                    "Fokker 70"
+                ]
+            },
+            {
+                "label": 1,
+                "head_name": "Canadair (Maker)",
+                "seen_variants": [
+                    "CRJ-700",
+                    "CRJ-900"
+                ]
+            },
+            {
+                "label": 2,
+                "head_name": "Douglas Aircraft Company (Maker)",
+                "seen_variants": [
+                    "DC-6",
+                    "DC-3"
+                ]
+            },
+            {
+                "label": 3,
+                "head_name": "British Aerospace (Maker)",
+                "seen_variants": [
+                    "BAE 146-200",
+                    "BAE 146-300"
+                ]
+            }
+        ],
+        "coarse_gen": [
+            {
+                "mapped_label": 0,
+                "unseen_variants": [
+                    "Fokker 50",
+                    "Fokker 100"
+                ]
+            },
+            {
+                "mapped_label": 1,
+                "unseen_variants": [
+                    "Challenger 600",
+                    "CRJ-200"
+                ]
+            },
+            {
+                "mapped_label": 2,
+                "unseen_variants": [
+                    "DC-8",
+                    "C-47"
+                ]
+            },
+            {
+                "mapped_label": 3,
+                "unseen_variants": [
+                    "Hawk T1",
+                    "BAE-125"
+                ]
+            }
+        ],
+        "medium_id": [
+            {
+                "label": 4,
+                "head_name": "Boeing 777 (Family)",
+                "seen_variants": [
+                    "777-200"
+                ]
+            },
+            {
+                "label": 5,
+                "head_name": "MD-80 (Family)",
+                "seen_variants": [
+                    "MD-80"
+                ]
+            },
+            {
+                "label": 6,
+                "head_name": "A340 (Family)",
+                "seen_variants": [
+                    "A340-200",
+                    "A340-500"
+                ]
+            },
+            {
+                "label": 7,
+                "head_name": "Dash 8 (Family)",
+                "seen_variants": [
+                    "DHC-8-100"
+                ]
+            }
+        ],
+        "medium_gen": [
+            {
+                "mapped_label": 4,
+                "unseen_variants": [
+                    "777-300"
+                ]
+            },
+            {
+                "mapped_label": 5,
+                "unseen_variants": [
+                    "MD-87"
+                ]
+            },
+            {
+                "mapped_label": 6,
+                "unseen_variants": [
+                    "A340-600",
+                    "A340-300"
+                ]
+            },
+            {
+                "mapped_label": 7,
+                "unseen_variants": [
+                    "DHC-8-300"
+                ]
+            }
+        ],
+        "near_family": [
+            "727-200",
+            "Boeing 717",
+            "747-100",
+            "747-200",
+            "747-300",
+            "747-400",
+            "767-200",
+            "767-300",
+            "767-400",
+            "737-200",
+            "737-300",
+            "737-400",
+            "737-500",
+            "737-600",
+            "737-700",
+            "737-800",
+            "737-900",
+            "707-320",
+            "757-200",
+            "757-300",
+            "DC-9-30",
+            "DC-10",
+            "MD-11",
+            "F/A-18",
+            "MD-90",
+            "A330-200",
+            "A330-300",
+            "A300B4",
+            "A380",
+            "A310",
+            "A318",
+            "A319",
+            "A320",
+            "A321",
+            "DHC-1",
+            "DH-82",
+            "DHC-6"
+        ],
+        "medium_groups": [
+            {
+                "maker": "Boeing",
+                "target_family": "Boeing 777",
+                "near_families": [
+                    "Boeing 727",
+                    "Boeing 717",
+                    "Boeing 747",
+                    "Boeing 767",
+                    "Boeing 737",
+                    "Boeing 707",
+                    "Boeing 757"
+                ]
+            },
+            {
+                "maker": "McDonnell Douglas",
+                "target_family": "MD-80",
+                "near_families": [
+                    "DC-9",
+                    "DC-10",
+                    "MD-11",
+                    "F/A-18",
+                    "MD-90"
+                ]
+            },
+            {
+                "maker": "Airbus",
+                "target_family": "A340",
+                "near_families": [
+                    "A330",
+                    "A300",
+                    "A380",
+                    "A310",
+                    "A320"
+                ]
+            },
+            {
+                "maker": "de Havilland",
+                "target_family": "Dash 8",
+                "near_families": [
+                    "DHC-1",
+                    "DH-82",
+                    "DHC-6"
+                ]
+            }
+        ],
+        "fine_id": [
+            {
+                "label": 8,
+                "head_name": "Gulfstream IV (Variant)",
+                "seen_variants": [
+                    "Gulfstream IV"
+                ]
+            },
+            {
+                "label": 9,
+                "head_name": "E-195 (Variant)",
+                "seen_variants": [
+                    "E-195"
+                ]
+            },
+            {
+                "label": 10,
+                "head_name": "ERJ 145 (Variant)",
+                "seen_variants": [
+                    "ERJ 145"
+                ]
+            },
+            {
+                "label": 11,
+                "head_name": "Cessna 525 (Variant)",
+                "seen_variants": [
+                    "Cessna 525"
+                ]
+            }
+        ],
+        "near_variant": [
+            "Gulfstream V",
+            "E-190",
+            "E-170",
+            "ERJ 135",
+            "Cessna 560"
+        ],
+        "fine_groups": [
+            {
+                "family": "Gulfstream",
+                "heads": [
+                    "L8:Gulfstream IV"
+                ],
+                "near_variants": [
+                    "Gulfstream V"
+                ]
+            },
+            {
+                "family": "Embraer E-Jet",
+                "heads": [
+                    "L9:E-195"
+                ],
+                "near_variants": [
+                    "E-190",
+                    "E-170"
+                ]
+            },
+            {
+                "family": "Embraer ERJ 145",
+                "heads": [
+                    "L10:ERJ 145"
+                ],
+                "near_variants": [
+                    "ERJ 135"
+                ]
+            },
+            {
+                "family": "Cessna Citation",
+                "heads": [
+                    "L11:Cessna 525"
+                ],
+                "near_variants": [
+                    "Cessna 560"
+                ]
+            }
+        ],
+        "far_ood": [
+            "Eurofighter Typhoon",
+            "Spitfire",
+            "Global Express",
+            "F-16A/B",
+            "C-130",
+            "L-1011",
+            "PA-28",
+            "Dornier 328",
+            "Yak-42",
+            "Il-76",
+            "DR-400",
+            "Beechcraft 1900",
+            "Model B200",
+            "Tornado",
+            "Tu-134",
+            "Tu-154",
+            "Saab 2000",
+            "Saab 340",
+            "ATR-42",
+            "ATR-72",
+            "Falcon 2000",
+            "Falcon 900",
+            "SR-20",
+            "An-12",
+            "Metroliner"
+        ]
+    }
+}
