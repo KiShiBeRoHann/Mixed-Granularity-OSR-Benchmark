@@ -231,10 +231,12 @@ def main():
     if torch.cuda.device_count() > 1:
         print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
         model = nn.DataParallel(model)
+    # DataParallel 不转发属性访问，内部子模块统一通过 inner 取
+    inner = model.module if isinstance(model, nn.DataParallel) else model
 
     optimizer = optim.SGD([
-        {'params': model.prompt_learner.parameters()},
-        {'params': model.cga.parameters()}
+        {'params': inner.prompt_learner.parameters()},
+        {'params': inner.cga.parameters()}
     ], lr=0.002, momentum=0.9)
     
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
@@ -261,7 +263,7 @@ def main():
         
         for epoch in range(args.epochs):
             model.train()
-            model.image_encoder.eval() 
+            inner.image_encoder.eval() 
             
             total_loss = 0
             for images, labels in tqdm(loaders['train'], desc=f"Epoch {epoch+1}/{args.epochs}", leave=False):
@@ -271,7 +273,7 @@ def main():
                 
                 loss_cls = criterion(logits_tar, labels)
                 probs_ass = F.log_softmax(logits_ass, dim=1)
-                loss_ass = - (1.0 / model.n_cls) * probs_ass.sum(dim=1).mean()
+                loss_ass = - (1.0 / inner.n_cls) * probs_ass.sum(dim=1).mean()
                 loss_div = (f_tar * f_ass).sum(dim=-1).mean()
                 
                 loss = loss_cls + 21.0 * loss_ass + 1.0 * loss_div

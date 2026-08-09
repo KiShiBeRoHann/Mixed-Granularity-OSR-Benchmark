@@ -248,7 +248,9 @@ def main():
     if torch.cuda.device_count() > 1:
         print(f"\n[+] 检测到 {torch.cuda.device_count()} 张 GPU，启用 DataParallel 并行训练")
         model = nn.DataParallel(model)
-    optimizer = optim.SGD(model.prompt_learner.parameters(), lr=0.002, momentum=0.9)
+    # DataParallel 不转发属性访问，内部子模块统一通过 inner 取
+    inner = model.module if isinstance(model, nn.DataParallel) else model
+    optimizer = optim.SGD(inner.prompt_learner.parameters(), lr=0.002, momentum=0.9)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     criterion = nn.CrossEntropyLoss()
     
@@ -267,7 +269,7 @@ def main():
         print(f"\n[!] 未发现缓存权重，开始 {method_name} [{unseen_tag} 设定] 的训练...")
         for epoch in range(args.epochs):
             model.train()
-            model.image_encoder.eval() 
+            inner.image_encoder.eval() 
             
             total_loss = 0
             for images, labels in tqdm(loaders['train'], desc=f"Epoch {epoch+1}/{args.epochs}", leave=False):
@@ -279,7 +281,7 @@ def main():
                 optimizer.zero_grad()
                 loss.backward()
                 # 防爆护盾
-                torch.nn.utils.clip_grad_norm_(model.prompt_learner.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(inner.prompt_learner.parameters(), max_norm=1.0)
                 optimizer.step()
                 
                 total_loss += loss.item()
