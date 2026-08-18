@@ -284,6 +284,12 @@ def main():
             )
             print(f"MG-OSCR: {mg_oscr:.2f}%")
         # -------------------------------------------------------
-        
+
+
+        # ---- 保存分数用于层次冲突可视化 ----
+        np.save(os.path.join(model_dir, f"{method_name}_id_scores.npy"), id_scores)
+        np.save(os.path.join(model_dir, f"{method_name}_gen_scores.npy"), gen_scores)
+        np.save(os.path.join(model_dir, f"{method_name}_near_ood_scores.npy"), near_scores)
+        np.save(os.path.join(model_dir, f"{method_name}_far_ood_scores.npy"), far_scores)
 if __name__ == "__main__":
     main()
