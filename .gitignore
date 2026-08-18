@@ -20,3 +20,6 @@ pictures/
 # 本机/临时文件，勿提交
 nohup.out
 reasonix.toml
+
+# 模型对话切换辅助文档，勿提交
+PROMPT_V2.md
