@@ -1,6 +1,6 @@
 # 混合粒度开放集识别评估 (Mixed-Granularity Open-Set Recognition)
 
-在已知类 + 粗/细粒度泛化 + 近邻/远距 OOD 的多粒度设定下，对比多种方法（Zero-Shot CLIP、Linear Probe CLIP、CoOp、CoCoOp、A2Pt、ARPL+CS、DeF、FSMoE、VGG-MLS）的开放集识别能力，核心指标包括 **OSCR**、AUROC、CV-RR / UN-RR / H-Score、IFCR 等。
+在已知类 + 粗/细粒度泛化 + 近邻/远距 OOD 的多粒度设定下，对比多种方法（Zero-Shot CLIP、Linear Probe CLIP、CoOp、CoCoOp、A2Pt、ARPL+CS、DeF、FSMoE、VGG-MLS、TANL）的开放集识别能力，核心指标包括 **OSCR**、AUROC、CV-RR / UN-RR / H-Score、IFCR 等。
 
 ## 环境要求
 
@@ -110,6 +110,7 @@ bash run.sh train_a2pt.py aircraft --include_unseen --num_layers 2
 ├── train_def.py         # DeF
 ├── train_fsmoe.py       # FSMoE
 ├── train_vgg_mls.py     # VGG-MLS
+├── train_tanl.py        # TANL（测试时激活负标签，zero-shot / training-free）
 ├── eval_zsclip.py       # Zero-Shot CLIP 评估
 ├── utils.py             # 指标实现（OSCR / CV-RR / UN-RR / H-Score / IFCR 等）
 ├── build.py             # ImageNet / iNaturalist 层次树划分构建
