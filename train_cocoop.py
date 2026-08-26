@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 # 导入统一的数据工厂和插件
 # =========================================================
 from datasets import get_mixed_granularity_loaders
-from utils import calculate_cvr_unr, calculate_oscr, state_dict_of, load_state_dict_into
+from utils import evaluate_mixed_metrics, calculate_cvr_unr, calculate_oscr, state_dict_of, load_state_dict_into
 
 # =========================================================
 # 0. 绝对严谨的随机种子锁死 (确保 Baseline 的完美复现)
@@ -320,138 +320,29 @@ def main():
         return np.array(all_scores), np.array(all_preds), np.array(all_targets)
 
     # 采集基础闭集分数
-    id_scores, id_preds, id_targets = collect_scores(loaders['test_id'])
-    pos_scores_strict = id_scores 
+    # ---------------------------------------------------------
+    # 统一多粒度开集评估（合并 gen / near，单次 CVRR-UNRR-H，仅 Global AUROC）
+    # ---------------------------------------------------------
+    _loader_keys = [
+        ('id', 'test_id'),
+        ('coarse_gen', 'test_coarse_gen'),
+        ('medium_gen', 'test_medium_gen'),
+        ('near_ood', 'test_near_ood'),
+        ('near_family', 'test_near_family'),
+        ('near_variant', 'test_near_variant'),
+        ('far_ood', 'test_far_ood'),
+    ]
+    score_map = {}
+    for key, lkey in _loader_keys:
+        ldr = loaders.get(lkey)
+        score_map[key] = collect_scores(ldr) if (ldr is not None and len(ldr.dataset) > 0) else None
 
-    # 通用辅助函数
-    def safe_acc(preds, targets):
-        return f"{100 * (preds == targets).mean():.2f}%" if len(targets) > 0 else "N/A"
+    evaluate_mixed_metrics(
+        score_map,
+        method_name=method_name,
+        tpr_target=0.95,
+        save_dir=model_dir,
+    )
 
-    def safe_auroc(y_true, y_scores):
-        if len(np.unique(y_true)) < 2: return 0.0
-        return roc_auc_score(y_true, y_scores) * 100
-
-    def get_auroc(neg_scores):
-        if len(neg_scores) == 0: return "N/A"
-        y_true = np.concatenate([np.ones(len(pos_scores_strict)), np.zeros(len(neg_scores))])
-        y_scores = np.concatenate([pos_scores_strict, neg_scores])
-        return f"{safe_auroc(y_true, y_scores):.2f}%"
-
-    if args.dataset in ['aircraft', 'imagenet', 'inaturalist']:
-        c_gen_scores, c_gen_preds, c_gen_targets = collect_scores(loaders['test_coarse_gen'])
-        m_gen_scores, m_gen_preds, m_gen_targets = collect_scores(loaders['test_medium_gen'])
-        near_fam_scores, _, _ = collect_scores(loaders['test_near_family'])
-        near_var_scores, _, _ = collect_scores(loaders['test_near_variant'])
-        far_scores, _, _ = collect_scores(loaders['test_far_ood'])
-
-        total_id_preds = np.concatenate([id_preds, c_gen_preds, m_gen_preds])
-        total_id_targets = np.concatenate([id_targets, c_gen_targets, m_gen_targets])
-        global_acc = 100 * (total_id_preds == total_id_targets).mean() if len(total_id_targets) > 0 else 0.0
-
-        c_gen_acc_str = safe_acc(c_gen_preds, c_gen_targets)
-        m_gen_acc_str = safe_acc(m_gen_preds, m_gen_targets)
-
-        near_fam_auroc = get_auroc(near_fam_scores)
-        near_var_auroc = get_auroc(near_var_scores)
-        far_auroc = get_auroc(far_scores)
-        
-        all_neg = np.concatenate([near_fam_scores, near_var_scores, far_scores])
-        global_auroc = get_auroc(all_neg)
-
-        print(f"\n{'='*15} {method_name} Results ({args.dataset.capitalize()}) {'='*15}")
-        print(f"Global Acc:  {global_acc:.2f}%")
-        print(f"Coarse Gen Acc (Maker):  {c_gen_acc_str}")
-        print(f"Medium Gen Acc (Family): {m_gen_acc_str}")
-        print("-" * 45)
-        print(f"Strict Global AUROC:       {global_auroc}")
-        print(f"Near-Family AUROC (跨族):  {near_fam_auroc}")
-        print(f"Near-Variant AUROC (同族): {near_var_auroc}")
-        print(f"Strict Far AUROC (隔离):   {far_auroc}")
-
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="COCOOP")
-        
-        if len(near_fam_scores) > 0:
-            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="COCOOP")
-
-        # ------------------- 增加 OSCR 评估 -------------------
-        print("-" * 45)
-        print(f"[COCOOP] OSCR 综合指标评估")
-        
-        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
-        global_correct_mask = (total_id_preds == total_id_targets)
-        global_oscr = calculate_oscr(
-            pred_k_id=global_id_scores,
-            x_k_id=global_correct_mask,
-            pred_u_ood=all_neg
-        )
-        print(f"[COCOOP] Global OSCR: {global_oscr:.2f}%")
-        
-        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
-            mg_correct_mask = (c_gen_preds == c_gen_targets)
-            mg_oscr = calculate_oscr(
-                pred_k_id=c_gen_scores,
-                x_k_id=mg_correct_mask,
-                pred_u_ood=near_var_scores
-            )
-            print(f"[COCOOP] MG-OSCR    : {mg_oscr:.2f}%")
-        # -------------------------------------------------------
-
-
-    elif args.dataset == 'cifar100':
-        gen_scores, gen_preds, gen_targets = collect_scores(loaders['test_coarse_gen'])
-        near_scores, _, _ = collect_scores(loaders['test_near_ood'])
-        far_scores, _, _ = collect_scores(loaders['test_far_ood'])
-
-        total_id_preds = np.concatenate([id_preds, gen_preds])
-        total_id_targets = np.concatenate([id_targets, gen_targets])
-        global_acc = 100 * (total_id_preds == total_id_targets).mean() if len(total_id_targets) > 0 else 0.0
-        
-        gen_acc_str = safe_acc(gen_preds, gen_targets)
-
-        near_auroc = get_auroc(near_scores)
-        far_auroc = get_auroc(far_scores)
-        
-        all_neg = np.concatenate([near_scores, far_scores])
-        global_auroc = get_auroc(all_neg)
-
-        status = "Seen" if args.include_unseen else "Unseen"
-        
-        print(f"\n{'='*15} {method_name} Results (CIFAR-100) {'='*15}")
-        print(f"Global Acc:  {global_acc:.2f}%")
-        print(f"Gen Acc ({status}): {gen_acc_str}")
-        print("-" * 45)
-        print(f"Strict Global AUROC: {global_auroc}")
-
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="COCOOP") 
-
-        # ------------------- 增加 OSCR 评估 -------------------
-        print("-" * 45)
-        print(f"[COCOOP] OSCR 综合指标评估")
-        
-        global_id_scores = np.concatenate([id_scores, gen_scores])
-        global_correct_mask = (total_id_preds == total_id_targets)
-        global_oscr = calculate_oscr(
-            pred_k_id=global_id_scores,
-            x_k_id=global_correct_mask,
-            pred_u_ood=all_neg
-        )
-        print(f"[COCOOP] Global OSCR: {global_oscr:.2f}%")
-        
-        if len(gen_scores) > 0 and len(near_scores) > 0:
-            mg_correct_mask = (gen_preds == gen_targets)
-            mg_oscr = calculate_oscr(
-                pred_k_id=gen_scores,
-                x_k_id=mg_correct_mask,
-                pred_u_ood=near_scores
-            )
-            print(f"[COCOOP] MG-OSCR    : {mg_oscr:.2f}%")
-        # -------------------------------------------------------
-
-
-        # ---- 保存分数用于层次冲突可视化 ----
-        np.save(os.path.join(model_dir, f"{method_name}_id_scores.npy"), id_scores)
-        np.save(os.path.join(model_dir, f"{method_name}_gen_scores.npy"), gen_scores)
-        np.save(os.path.join(model_dir, f"{method_name}_near_ood_scores.npy"), near_scores)
-        np.save(os.path.join(model_dir, f"{method_name}_far_ood_scores.npy"), far_scores)
 if __name__ == "__main__":
     main()

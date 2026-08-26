@@ -89,6 +89,142 @@ def calculate_cvr_unr(id_scores, coarse_gen_scores, near_ood_scores, tpr_target=
     return cv_rr, un_rr, h_score
 
 
+def evaluate_mixed_metrics(score_map, method_name="Method", tpr_target=0.95, save_dir=None, include_oscr=True):
+    """
+    统一的多粒度开集评估入口（兼容 2 层 / 3 层划分，无需按数据集区分分支）。
+
+    语义说明（与讨论达成的一致精简方案）：
+      * 泛化集(gen)合并：把 coarse_gen 与 medium_gen 的样本合并成同一个"泛化新增"集合，
+        对应一个统一的 Gen Acc（不再分 Coarse/Medium 两个打印）。
+      * 近邻OOD合并：把 near_ood / near_family / near_variant 合并成同一个"近邻OOD"集合，
+        作为 CVRR/UNRR 的 UN 侧与 Global AUROC 的负样本。
+      * CVRR/UNRR/H-Score 只计算一次（用合并后的 gen 作为 CV 侧、合并后的 near 作为 UN 侧）。
+      * AUROC 只打印一个 Global AUROC（含近邻+远邻全部负样本）。
+      * OSCR 保留 Global OSCR（合并 gen 后 "MG-OSCR" 这类依赖细分配对的指标不再有意义，故不输出）。
+
+    :param score_map: dict, 键为 'id'/'coarse_gen'/'medium_gen'/'near_ood'/'near_family'/'near_variant'/'far_ood'，
+                      值为 (scores, preds, targets) 三元组或 None（对应 loader 不存在/为空时传 None）。
+        scores 越大的分数越视为"已知/已识别"（用于阈值与 AUROC）。
+    :param method_name: 打印前缀，例如 "A2Pt" / "CoOp"。
+    :param tpr_target: CVRR/UNRR 锚定的 TPR（默认 0.95）。
+    :param save_dir: 若提供，则把合并后的 id/gen/near_ood/far_ood 分数保存为 *_{id,gen,near_ood,far_ood}_scores.npy。
+                     注意 gen_scores 为 coarse+medium 合并后、near_ood_scores 为 近邻各集合合并后的结果。
+    :param include_oscr: 是否输出 Global OSCR（默认 True）。
+    """
+    import numpy as np
+    from sklearn.metrics import roc_auc_score
+
+    def _pick(key):
+        v = score_map.get(key)
+        if v is None:
+            return None
+        s, p, t = v
+        if s is None or len(s) == 0:
+            return None
+        return (np.asarray(s), np.asarray(p), np.asarray(t))
+
+    # ---------- ID ----------
+    id_scores, id_preds, id_targets = (None, None, None)
+    _id = _pick('id')
+    if _id is not None:
+        id_scores, id_preds, id_targets = _id
+    if id_scores is None or len(id_scores) == 0:
+        print(f"\n[{method_name}] 评估中止：缺少 ID 分数。")
+        return None
+    pos_scores_strict = id_scores
+
+    # ---------- 泛化集合并 (coarse + medium) ----------
+    gen_parts = []
+    for k in ('coarse_gen', 'medium_gen'):
+        g = _pick(k)
+        if g is not None:
+            gen_parts.append(g)
+    gen_scores = np.concatenate([g[0] for g in gen_parts]) if gen_parts else np.array([])
+    gen_preds   = np.concatenate([g[1] for g in gen_parts]) if gen_parts else np.array([])
+    gen_targets = np.concatenate([g[2] for g in gen_parts]) if gen_parts else np.array([])
+
+    # ---------- 近邻OOD合并 (near_ood / near_family / near_variant) ----------
+    near_parts = []
+    for k in ('near_ood', 'near_family', 'near_variant'):
+        n = _pick(k)
+        if n is not None:
+            near_parts.append(n[0])
+    near_scores = np.concatenate(near_parts) if near_parts else np.array([])
+
+    # ---------- 远邻OOD ----------
+    _far = _pick('far_ood')
+    far_scores = _far[0] if _far is not None else np.array([])
+
+    def safe_acc(preds, targets):
+        return f"{100 * (preds == targets).mean():.2f}%" if len(targets) > 0 else "N/A"
+    def safe_auroc(y_true, y_scores):
+        if len(np.unique(y_true)) < 2:
+            return 0.0
+        return roc_auc_score(y_true, y_scores) * 100
+    def get_auroc(neg_scores):
+        if len(neg_scores) == 0:
+            return "N/A"
+        y_true = np.concatenate([np.ones(len(pos_scores_strict)), np.zeros(len(neg_scores))])
+        y_scores = np.concatenate([pos_scores_strict, neg_scores])
+        return f"{safe_auroc(y_true, y_scores):.2f}%"
+
+    # ---------- Global Acc ----------
+    total_preds = np.concatenate([id_preds, gen_preds]) if len(gen_preds) > 0 else id_preds
+    total_targets = np.concatenate([id_targets, gen_targets]) if len(gen_targets) > 0 else id_targets
+    global_acc = 100 * (total_preds == total_targets).mean() if len(total_targets) > 0 else 0.0
+
+    # ---------- 输出 ----------
+    print(f"\n{'='*15} Results ({method_name}) {'='*15}")
+    print(f"Global Acc:  {global_acc:.2f}%")
+    print(f"Gen Acc:     {safe_acc(gen_preds, gen_targets)}")
+    print("-" * 45)
+
+    all_neg = np.concatenate([near_scores, far_scores]) if len(near_scores) > 0 or len(far_scores) > 0 else np.array([])
+    print(f"Strict Global AUROC: {get_auroc(all_neg)}")
+
+    # ---------- 统一 CVRR / UNRR / H-Score（只一次） ----------
+    if len(near_scores) > 0:
+        calculate_cvr_unr(
+            id_scores=id_scores,
+            coarse_gen_scores=gen_scores,
+            near_ood_scores=near_scores,
+            tpr_target=tpr_target,
+            method_name=method_name,
+        )
+    else:
+        print(f"\n[{method_name}] 无可用于 CVRR/UNRR 的近邻OOD样本，跳过。")
+
+    # ---------- Global OSCR ----------
+    if include_oscr:
+        print("-" * 45)
+        print(f"[{method_name}] OSCR 综合指标评估")
+        global_id_scores = np.concatenate([id_scores, gen_scores]) if len(gen_scores) > 0 else id_scores
+        global_oscr = calculate_oscr(
+            pred_k_id=global_id_scores,
+            x_k_id=(total_preds == total_targets),
+            pred_u_ood=all_neg if len(all_neg) > 0 else np.array([1.0]),
+        )
+        print(f"[{method_name}] Global OSCR: {global_oscr:.2f}%")
+
+    # ---------- 可选保存（供下游可视化） ----------
+    if save_dir is not None:
+        import os
+        os.makedirs(save_dir, exist_ok=True)
+        np.save(os.path.join(save_dir, f"{method_name}_id_scores.npy"), id_scores)
+        np.save(os.path.join(save_dir, f"{method_name}_gen_scores.npy"), gen_scores)
+        if len(near_scores) > 0:
+            np.save(os.path.join(save_dir, f"{method_name}_near_ood_scores.npy"), near_scores)
+        if len(far_scores) > 0:
+            np.save(os.path.join(save_dir, f"{method_name}_far_ood_scores.npy"), far_scores)
+
+    return {
+        "global_acc": global_acc,
+        "gen_acc": 100 * (gen_preds == gen_targets).mean() if len(gen_targets) > 0 else None,
+        "global_auroc": get_auroc(all_neg),
+        "cv_rr_ar": None,  # 合并后的 CVRR/UNRR/H 由 calculate_cvr_unr 打印
+    }
+
+
 def calculate_oscr(pred_k_id, x_k_id, pred_u_ood):
 
 

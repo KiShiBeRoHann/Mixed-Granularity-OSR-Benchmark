@@ -10,7 +10,7 @@ from datasets import get_mixed_granularity_loaders
 import json
 import os
 
-from utils import calculate_cvr_unr, calculate_oscr
+from utils import evaluate_mixed_metrics, calculate_cvr_unr, calculate_oscr
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -114,122 +114,29 @@ def main():
         return np.array(all_scores), np.array(all_preds), np.array(all_targets)
 
     # 采集分数
-    id_scores, id_preds, id_targets = collect_scores(loaders['test_id'])
-    pos_scores_strict = id_scores 
+    # ---------------------------------------------------------
+    # 统一多粒度开集评估（合并 gen / near，单次 CVRR-UNRR-H，仅 Global AUROC）
+    # ---------------------------------------------------------
+    _loader_keys = [
+        ('id', 'test_id'),
+        ('coarse_gen', 'test_coarse_gen'),
+        ('medium_gen', 'test_medium_gen'),
+        ('near_ood', 'test_near_ood'),
+        ('near_family', 'test_near_family'),
+        ('near_variant', 'test_near_variant'),
+        ('far_ood', 'test_far_ood'),
+    ]
+    score_map = {}
+    for key, lkey in _loader_keys:
+        ldr = loaders.get(lkey)
+        score_map[key] = collect_scores(ldr) if (ldr is not None and len(ldr.dataset) > 0) else None
 
-    def safe_acc(preds, targets): return f"{100 * (preds == targets).mean():.2f}%" if len(targets) > 0 else "N/A"
-    def safe_auroc(y_true, y_scores): return roc_auc_score(y_true, y_scores) * 100 if len(np.unique(y_true)) >= 2 else 0.0
-    def get_auroc(neg_scores):
-        if len(neg_scores) == 0: return "N/A"
-        y_true = np.concatenate([np.ones(len(pos_scores_strict)), np.zeros(len(neg_scores))])
-        y_scores = np.concatenate([pos_scores_strict, neg_scores])
-        return f"{safe_auroc(y_true, y_scores):.2f}%"
+    evaluate_mixed_metrics(
+        score_map,
+        method_name="ZeroShotCLIP",
+        tpr_target=0.95,
+        save_dir=None,  # eval_zsclip 原代码未定义 model_dir；不写盘，避免 NameError
+    )
 
-    if args.dataset in ['aircraft', 'imagenet', 'inaturalist']:
-        c_gen_scores, c_gen_preds, c_gen_targets = collect_scores(loaders['test_coarse_gen'])
-        m_gen_scores, m_gen_preds, m_gen_targets = collect_scores(loaders['test_medium_gen'])
-        near_fam_scores, _, _ = collect_scores(loaders['test_near_family'])
-        near_var_scores, _, _ = collect_scores(loaders['test_near_variant'])
-        far_scores, _, _ = collect_scores(loaders['test_far_ood'])
-
-        total_id_preds = np.concatenate([id_preds, c_gen_preds, m_gen_preds])
-        total_id_targets = np.concatenate([id_targets, c_gen_targets, m_gen_targets])
-        global_acc = 100 * (total_id_preds == total_id_targets).mean() if len(total_id_targets) > 0 else 0.0
-
-        print(f"\n{'='*15} Zero-Shot CLIP Results ({args.dataset.capitalize()}) {'='*15}")
-        print(f"Global Acc:  {global_acc:.2f}%")
-        print(f"Coarse Gen Acc (Maker):  {safe_acc(c_gen_preds, c_gen_targets)}")
-        print(f"Medium Gen Acc (Family): {safe_acc(m_gen_preds, m_gen_targets)}")
-        print("-" * 45)
-        print(f"Strict Global AUROC:       {get_auroc(np.concatenate([near_fam_scores, near_var_scores, far_scores]))}")
-        print(f"Near-Family AUROC (跨族):  {get_auroc(near_fam_scores)}")
-        print(f"Near-Variant AUROC (同族): {get_auroc(near_var_scores)}")
-        print(f"Strict Far AUROC (隔离):   {get_auroc(far_scores)}")
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=c_gen_scores, near_ood_scores=near_var_scores, tpr_target=0.95, method_name="ZeroShotCLIP")
-        
-        if len(near_fam_scores) > 0:
-            calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=m_gen_scores if len(m_gen_scores) > 0 else c_gen_scores, near_ood_scores=near_fam_scores, tpr_target=0.95, method_name="ZeroShotCLIP")
-
-        # ------------------- 增加 OSCR 评估 -------------------
-        print("-" * 45)
-        print(f"[ZeroShotCLIP] OSCR 综合指标评估")
-        
-        all_neg = np.concatenate([near_fam_scores, near_var_scores, far_scores])
-        global_id_scores = np.concatenate([id_scores, c_gen_scores, m_gen_scores])
-        
-        # 计算全局正确性布尔数组
-        global_correct_mask = (total_id_preds == total_id_targets)
-        
-        global_oscr = calculate_oscr(
-            pred_k_id=global_id_scores,
-            x_k_id=global_correct_mask,
-            pred_u_ood=all_neg
-        )
-        print(f"[ZeroShotCLIP] Global OSCR: {global_oscr:.2f}%")
-        
-        if len(c_gen_scores) > 0 and len(near_var_scores) > 0:
-            # 计算混合粒度的正确性布尔数组
-            mg_correct_mask = (c_gen_preds == c_gen_targets)
-            
-            mg_oscr = calculate_oscr(
-                pred_k_id=c_gen_scores,
-                x_k_id=mg_correct_mask,
-                pred_u_ood=near_var_scores
-            )
-            print(f"[ZeroShotCLIP] MG-OSCR    : {mg_oscr:.2f}%")
-        # -------------------------------------------------------
-
-
-    elif args.dataset == 'cifar100':
-        gen_scores, gen_preds, gen_targets = collect_scores(loaders['test_coarse_gen'])
-        near_scores, _, _ = collect_scores(loaders['test_near_ood'])
-        far_scores, _, _ = collect_scores(loaders['test_far_ood'])
-
-        total_id_preds = np.concatenate([id_preds, gen_preds])
-        total_id_targets = np.concatenate([id_targets, gen_targets])
-        global_acc = 100 * (total_id_preds == total_id_targets).mean() if len(total_id_targets) > 0 else 0.0
-        
-        print(f"\n{'='*15} Zero-Shot CLIP Results (CIFAR-100) {'='*15}")
-        print(f"Global Acc:  {global_acc:.2f}%")
-        print(f"Gen Acc: {safe_acc(gen_preds, gen_targets)}")
-        print("-" * 45)
-        print(f"Strict Global AUROC: {get_auroc(np.concatenate([near_scores, far_scores]))}")
-        calculate_cvr_unr(id_scores=id_scores, coarse_gen_scores=gen_scores, near_ood_scores=near_scores, tpr_target=0.95, method_name="ZeroShotCLIP") 
-
-        # ------------------- 增加 OSCR 评估 -------------------
-        print("-" * 45)
-        print(f"[ZeroShotCLIP] OSCR 综合指标评估")
-        
-        all_neg = np.concatenate([near_scores, far_scores])
-        global_id_scores = np.concatenate([id_scores, gen_scores])
-        
-        # 计算全局正确性布尔数组
-        global_correct_mask = (total_id_preds == total_id_targets)
-        
-        global_oscr = calculate_oscr(
-            pred_k_id=global_id_scores,
-            x_k_id=global_correct_mask,
-            pred_u_ood=all_neg
-        )
-        print(f"[ZeroShotCLIP] Global OSCR: {global_oscr:.2f}%")
-        
-        if len(gen_scores) > 0 and len(near_scores) > 0:
-            # 计算混合粒度的正确性布尔数组
-            mg_correct_mask = (gen_preds == gen_targets)
-            
-            mg_oscr = calculate_oscr(
-                pred_k_id=gen_scores,
-                x_k_id=mg_correct_mask,
-                pred_u_ood=near_scores
-            )
-            print(f"[ZeroShotCLIP] MG-OSCR    : {mg_oscr:.2f}%")
-        # -------------------------------------------------------
-
-
-        # ---- 保存分数用于层次冲突可视化 ----
-        np.save(os.path.join(model_dir, f"{method_name}_id_scores.npy"), id_scores)
-        np.save(os.path.join(model_dir, f"{method_name}_gen_scores.npy"), gen_scores)
-        np.save(os.path.join(model_dir, f"{method_name}_near_ood_scores.npy"), near_scores)
-        np.save(os.path.join(model_dir, f"{method_name}_far_ood_scores.npy"), far_scores)
 if __name__ == '__main__':
     main()
