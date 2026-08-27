@@ -33,11 +33,7 @@ else
     MODE_STR="Standard"
 fi
 
-if [ "$DATASET" == "cifar100" ]; then
-    SEEDS=(42 43 44 45 46)
-else
-    SEEDS=(42 43 44 45 46)
-fi
+SEEDS=(42 43 44 45 46)
 
 echo "==================================================" > $LOG_FILE
 echo "方法: $SCRIPT_NAME" >> $LOG_FILE
