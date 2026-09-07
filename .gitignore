@@ -22,4 +22,10 @@ nohup.out
 reasonix.toml
 
 # 模型对话切换辅助文档，勿提交
-PROMPT_V2.md
+PROMPT.md
+
+# 论文写作文档（含 working draft），勿提交
+论文/
+
+# 画图/可视化脚本（绘图口径随实验迭代频繁调整，不纳入版本库）
+plot_*.py
