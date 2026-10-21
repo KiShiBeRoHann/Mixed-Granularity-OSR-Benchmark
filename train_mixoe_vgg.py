@@ -173,28 +173,36 @@ def main():
         if loader is not None and hasattr(loader, 'dataset'):
             loader.dataset.transform = train_transform if 'train' in k else test_transform
 
-    # ---------------- outlier 池 + 互斥核对 ----------------
-    if args.dataset == 'imagenet' and os.path.abspath(args.oe_root).startswith(
-            os.path.abspath('./datasets/imagenet')):
-        raise RuntimeError(
-            "❌ imagenet 任务的 ID/OOD 类本身就来自 ImageNet-1K, 不能用它自己当 outlier 池。\n"
-            "   请换一个外部数据集, 例如 --oe_root ./datasets/inaturalist/train")
+    # ---------------- 权重路径（先判断是否需要训练） ----------------
+    method_name = "MixOE_VGG"
+    model_dir = f"./models/{args.dataset}/L{args.num_layers}/seed_{args.seed}"
+    os.makedirs(model_dir, exist_ok=True)
+    unseen_tag = "Unseen_In_Train" if args.include_unseen else "Pure_Closed_Set"
+    model_path = os.path.join(model_dir, f"{method_name}_{unseen_tag}_weights.pth")
 
-    task_names = {_norm_name(n) for n in clean_classnames}
-    kept_dirs, overlaps = prepare_outlier_pool(
-        args.oe_root, task_names, num_classes, "MixOE-VGG",
-        max_classes=args.oe_max_classes,
-        max_per_class=args.oe_max_per_class or None,
-        allow_overlap=args.allow_overlap,
-    )
-    if len(kept_dirs) == 0:
-        raise RuntimeError("剔除同名类后 outlier 池为空, 检查 --oe_root 是否选错了数据集")
+    # ---------------- outlier 池 + 互斥核对（仅训练时需要） ----------------
+    if not os.path.exists(model_path):
+        if args.dataset == 'imagenet' and os.path.abspath(args.oe_root).startswith(
+                os.path.abspath('./datasets/imagenet')):
+            raise RuntimeError(
+                "❌ imagenet 任务的 ID/OOD 类本身就来自 ImageNet-1K, 不能用它自己当 outlier 池。\n"
+                "   请换一个外部数据集, 例如 --oe_root ./datasets/inaturalist/train")
 
-    oe_dataset = OutlierPool(args.oe_root, kept_dirs, transform=train_transform,
-                             max_per_class=args.oe_max_per_class or None)
-    if len(oe_dataset) == 0:
-        raise RuntimeError("outlier 池为空, 检查 --oe_root / --oe_max_classes / --oe_max_per_class")
-    print(f"  -> outlier 池样本数: {len(oe_dataset)}")
+        task_names = {_norm_name(n) for n in clean_classnames}
+        kept_dirs, overlaps = prepare_outlier_pool(
+            args.oe_root, task_names, num_classes, "MixOE-VGG",
+            max_classes=args.oe_max_classes,
+            max_per_class=args.oe_max_per_class or None,
+            allow_overlap=args.allow_overlap,
+        )
+        if len(kept_dirs) == 0:
+            raise RuntimeError("剔除同名类后 outlier 池为空, 检查 --oe_root 是否选错了数据集")
+
+        oe_dataset = OutlierPool(args.oe_root, kept_dirs, transform=train_transform,
+                                 max_per_class=args.oe_max_per_class or None)
+        if len(oe_dataset) == 0:
+            raise RuntimeError("outlier 池为空, 检查 --oe_root / --oe_max_classes / --oe_max_per_class")
+        print(f"  -> outlier 池样本数: {len(oe_dataset)}")
 
     if args.dry_run:
         print("\n[dry_run] 互斥核对通过, 未做任何训练。")
