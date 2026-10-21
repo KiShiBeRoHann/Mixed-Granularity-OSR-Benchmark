@@ -387,6 +387,8 @@ def main():
         mode=('Unseen_In_Train' if getattr(args, 'include_unseen', False) else 'Pure_Closed_Set'),
         tpr_target=0.95,
         save_dir=model_dir,
+        extra_meta={'dataset': args.dataset, 'num_layers': args.num_layers,
+                    'seed': args.seed, 'eval_view': 'V4'},
     )
 
 
