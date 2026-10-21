@@ -281,8 +281,7 @@ def main():
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--include_unseen', action='store_true')
-    parser.add_argument('--num_layers', type=int, default=2, choices=[2, 3],
-                        help='划分层级数：2层(Family->Variant) 或 3层(Maker->Family->Variant)')
+    parser.add_argument('--num_layers', type=str, default='2', choices=['2', '3', '2d', '2df', '3fc'], help="划分层级数：'2'=Family->Variant｜'3'=Maker->Family->Variant｜'2d'=从 L3 派生的两层划分（仅 aircraft，用于'层数消融'，产物落在 L2d/）；见 datasets/split_fgvc.py 分支 C")
     # ---------------- TANL 超参 (论文默认) ----------------
     parser.add_argument('--num_neg_labels', type=int, default=1000, help='M: 每batch激活负标签数 (论文默认1000)')
     parser.add_argument('--gap', type=float, default=0.2, help='g: 高置信样本筛选间隔 (论文默认0.2)')
@@ -368,6 +367,8 @@ def main():
     scores = run_tanl_stream(tanl, clip_model, loaders, device, seed=args.seed)
 
     method_name = "TANL"
+    model_dir = f"./models/{args.dataset}/L{args.num_layers}/seed_{args.seed}"
+    os.makedirs(model_dir, exist_ok=True)
     id_scores, id_preds, id_targets = scores['test_id']  # noqa: F841（公共函数内部使用）
 
     # ---------------------------------------------------------
@@ -390,8 +391,13 @@ def main():
     evaluate_mixed_metrics(
         score_map,
         method_name=method_name,
+        mode=('Unseen_In_Train' if getattr(args, 'include_unseen', False) else 'Pure_Closed_Set'),
         tpr_target=0.95,
         save_dir=model_dir,
+        # TANL 为 transductive（测试流在线自适应），暂不接入 --eval_view；
+        # 这里的记录固定标记为默认视图 V4，便于汇总脚本识别口径
+        extra_meta={'dataset': args.dataset, 'num_layers': args.num_layers,
+                    'seed': args.seed, 'eval_view': 'V4'},
     )
 
     print("\n" + "=" * 50)

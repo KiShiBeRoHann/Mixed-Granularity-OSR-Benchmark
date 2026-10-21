@@ -12,7 +12,7 @@ import clip
 
 # 导入统一的数据工厂和插件
 from datasets import get_mixed_granularity_loaders
-from utils import evaluate_mixed_metrics, calculate_oscr, calculate_cvr_unr, state_dict_of, load_state_dict_into
+from utils import evaluate_mixed_metrics, calculate_oscr, calculate_cvr_unr, state_dict_of, load_state_dict_into, view_save_dir
 
 def set_seed(seed=1):
     import random
@@ -167,7 +167,8 @@ def main():
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=50) # 遵循设定，保持 50 epochs
     parser.add_argument('--include_unseen', action='store_true', help="开启 Oracle 模式 (计算 Seen Acc)")
-    parser.add_argument('--num_layers', type=int, default=2, choices=[2, 3], help='划分层级数：2层(Family->Variant) 或 3层(Maker->Family->Variant)')
+    parser.add_argument('--num_layers', type=str, default='2', choices=['2', '3', '2d', '2df', '3fc'], help="划分层级数：'2'=Family->Variant｜'3'=Maker->Family->Variant｜'2d'=从 L3 派生的两层划分（仅 aircraft，用于'层数消融'，产物落在 L2d/）；见 datasets/split_fgvc.py 分支 C")
+    parser.add_argument('--eval_view', type=str, default='V4', choices=['V1', 'V2', 'V3', 'V4'], help='评估靶场视图(默认 V4)：aircraft/imagenet 的 L3 支持 V1=L2语义/V2=+兄弟族/V3=+粗粒度泛化/V4=全量(imagenet 的 V1/V2 gen 集仅 50~500 张，需看 n_gen_medium)；其它数据集/层级只支持默认 V4')
     args = parser.parse_args()
 
     set_seed(1)
@@ -190,7 +191,8 @@ def main():
         include_unseen=args.include_unseen,
         far_ood_mode='fine',
         preprocess=preprocess,
-        num_layers=args.num_layers
+        num_layers=args.num_layers,
+        eval_view=args.eval_view
     )
 
     clean_classnames = []
@@ -342,8 +344,11 @@ def main():
     evaluate_mixed_metrics(
         score_map,
         method_name="A2Pt",
+        mode=('Unseen_In_Train' if getattr(args, 'include_unseen', False) else 'Pure_Closed_Set'),
         tpr_target=0.95,
-        save_dir=model_dir,
+        save_dir=view_save_dir(model_dir, args.eval_view),
+        extra_meta={'dataset': args.dataset, 'num_layers': args.num_layers,
+                    'seed': args.seed, 'eval_view': args.eval_view},
     )
 
 

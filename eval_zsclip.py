@@ -10,7 +10,7 @@ from datasets import get_mixed_granularity_loaders
 import json
 import os
 
-from utils import evaluate_mixed_metrics, calculate_cvr_unr, calculate_oscr
+from utils import evaluate_mixed_metrics, calculate_cvr_unr, calculate_oscr, view_save_dir
 
 def set_seed(seed=1):
     random.seed(seed)
@@ -26,7 +26,14 @@ def main():
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--include_unseen', action='store_true')
-    parser.add_argument('--num_layers', type=int, default=2, choices=[2, 3], help='划分层级数：2层(Family->Variant) 或 3层(Maker->Family->Variant)')
+    parser.add_argument('--num_layers', type=str, default='2', choices=['2', '3', '2d', '2df', '3fc'], help="划分层级数：'2'=Family->Variant｜'3'=Maker->Family->Variant｜'2d'=从 L3 派生的两层划分（仅 aircraft，用于'层数消融'，产物落在 L2d/）；见 datasets/split_fgvc.py 分支 C")
+    parser.add_argument('--save', action='store_true',
+                        help='保存各分群分数 npy 到 models/{dataset}/L{num_layers}/seed_{seed}（供热力图/象限图等可视化）')
+    parser.add_argument('--save_dir', type=str, default=None,
+                        help='显式指定保存目录（优先级高于 --save）')
+    parser.add_argument('--eval_view', type=str, default='V4', choices=['V1', 'V2', 'V3', 'V4'],
+                        help='评估靶场视图(默认 V4)：aircraft/imagenet 的 L3 支持 V1=L2语义/V2=+兄弟族/V3=+粗粒度泛化/V4=全量'
+                             '(imagenet 的 V1/V2 gen 集仅 50~500 张，需看 n_gen_medium)；其它数据集/层级只支持默认 V4')
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -43,7 +50,8 @@ def main():
         include_unseen=args.include_unseen,
         far_ood_mode='fine',
         preprocess=preprocess,
-        num_layers=args.num_layers
+        num_layers=args.num_layers,
+        eval_view=args.eval_view
     )
 
     # =========================================================
@@ -131,11 +139,21 @@ def main():
         ldr = loaders.get(lkey)
         score_map[key] = collect_scores(ldr) if (ldr is not None and len(ldr.dataset) > 0) else None
 
+    # 保存目录：--save_dir 优先；否则 --save 自动构造与训练脚本一致的路径
+    # 非默认视图(V1/V2/V3)会在基目录下追加 view_V{n} 子目录，避免覆盖 V4 的历史产物
+    save_dir = args.save_dir
+    if save_dir is None and args.save:
+        save_dir = f'./models/{args.dataset}/L{args.num_layers}/seed_{args.seed}'
+    save_dir = view_save_dir(save_dir, args.eval_view)
+
     evaluate_mixed_metrics(
         score_map,
         method_name="ZeroShotCLIP",
+        mode=('Unseen_In_Train' if getattr(args, 'include_unseen', False) else 'Pure_Closed_Set'),
         tpr_target=0.95,
-        save_dir=None,  # eval_zsclip 原代码未定义 model_dir；不写盘，避免 NameError
+        save_dir=save_dir,
+        extra_meta={'dataset': args.dataset, 'num_layers': args.num_layers,
+                    'seed': args.seed, 'eval_view': args.eval_view},
     )
 
 if __name__ == '__main__':
