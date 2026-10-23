@@ -232,6 +232,134 @@ class FGVCAircraftMixedGranularity:
                 for f in self.maker_to_families[maker]:
                     self.split_config["far_ood"].extend(self.family_to_variants[f])
 
+        # ========================================================
+        # 🧪 分支 C: 从 L3 派生的两层划分 (num_layers == '2d') —— 层数消融专用
+        # ========================================================
+        # 动机：L2 与 L3 是**两套独立抽签**（ID 类、训练图片、甚至 coarse 头的层级语义都不同），
+        # 因此它们的差值无法归因于"层数"。L2d 复用 L3 的同一棵树、同一批 ID 类，
+        # 只把 Maker 层**去掉**，得到一个与原 L2 同构的两层划分（Family -> Variant）：
+        #
+        #   * ID 头    = L3 的 medium_id(4 个 Family 头) + fine_id(12 个 Variant 头) = 16 头
+        #   * 训练图片  = 上述 16 个头的 seen_variants
+        #                （是 L3 训练集的**子集**：少了 L3 靠 Maker 头承载的那批图，
+        #                  因为两层设定下它们没有对应的 Family/Variant 头）
+        #   * 靶场      = L3 的 medium_gen(→ 本划分的 coarse_gen，Family 级泛化)
+        #                + near_variant + near_family(→ 合并为 near_variant) + far_ood
+        #                ⇒ 与 **L3 的 V2 视图逐张相同**
+        #
+        # 于是 (L2d vs L3-V2) 的差异只剩"训练/标签空间里有没有 Maker 层"：
+        # 靶场完全一致、权重同源同 seed，差异可归因于层数。
+        # 产物路径由 L{num_layers} 决定 → `models/aircraft/L2d/`、`splits/aircraft/L2d/`，
+        # 与既有的 `L2/`、`L3/` 完全隔离，不会覆盖历史结果。
+        elif str(self.num_layers) in ('2d', '2df'):
+            l3_json = os.path.join('splits/aircraft/L3', f'seed_{self.seed}.json')
+            if not os.path.exists(l3_json):
+                # 首次运行：先按同一 seed 生成 L3 划分（抽签是确定性的）
+                FGVCAircraftMixedGranularity(root=self.root, seed=self.seed,
+                                             seen_ratio=self.seen_ratio, num_layers=3)
+            with open(l3_json) as f:
+                l3 = json.load(f)['split_config']
+
+            # '2df' 与 '2d' 的唯一区别：L3 的 coarse_id(Maker 头) 承载的那批 seen_variants
+            # 不再丢弃，而是**按各自的 family 建成新的 Family 头**。
+            # 于是训练图片与 L3 **逐张相同**，唯一差异是"粗层标签"的抽象层级：
+            #   L3 : 那批图 → Maker 级合并标签（一个 maker 下的多个 family 共用一个标签）
+            #   L2df: 同样的图 → 各自的 family 级标签
+            # ⇒ (L2df vs L3-V2) 是比 (L2d vs L3-V2) 更纯的"层数/标签粒度"消融
+            #   （头数 21~22 ≈ 20、训练图完全相同）
+            if str(self.num_layers) == '2df':
+                by_fam = {}
+                for item in l3.get('coarse_id', []):
+                    for v in item['seen_variants']:
+                        by_fam.setdefault(self.variant_to_family[v], []).append(v)
+                for fam, vs in by_fam.items():
+                    new_label = len(self.split_config['coarse_id'])
+                    self.split_config['coarse_id'].append({
+                        'label': new_label, 'head_name': f'{fam} (Family)', 'seen_variants': list(vs)})
+
+            remap = {}
+            for item in l3.get('medium_id', []):
+                new_label = len(self.split_config['coarse_id'])
+                remap[item['label']] = new_label
+                self.split_config['coarse_id'].append({
+                    'label': new_label, 'head_name': item['head_name'],
+                    'seen_variants': list(item['seen_variants'])})
+            for item in l3.get('medium_gen', []):
+                self.split_config['coarse_gen'].append({
+                    'mapped_label': remap[item['mapped_label']],
+                    'unseen_variants': list(item['unseen_variants'])})
+            for item in l3.get('fine_id', []):
+                new_label = len(self.split_config['coarse_id']) + len(self.split_config['fine_id'])
+                remap[item['label']] = new_label
+                self.split_config['fine_id'].append({
+                    'label': new_label, 'head_name': item['head_name'],
+                    'seen_variants': list(item['seen_variants'])})
+
+            # 近邻对齐 L3 的 V2 视图：near_variant + near_family 合并进两层划分唯一的近邻键
+            self.split_config['near_variant'] = (list(l3.get('near_variant', []))
+                                                 + list(l3.get('near_family', [])))
+            self.split_config['far_ood'] = list(l3.get('far_ood', []))
+            current_label = (len(self.split_config['coarse_id'])
+                             + len(self.split_config['fine_id']))
+
+        # ========================================================
+        # 🧪 分支 D: L3 + 细层粗化 (num_layers == '3fc')
+        # ========================================================
+        # 在 L3 的基础上，把 fine_id 的 Variant 头**按 family 合并**成 Family 头
+        # （aircraft seed 42：Boeing 737 的 4 个 variant、747 的 2 个、其余 6 个 family 各 1 个
+        #   → 12 个 Variant 头合并为 8 个 Family 头）。
+        #
+        # 训练图片、粗层/中层的构成、以及**全部 OOD 靶场**（coarse_gen / medium_gen /
+        # near_family / near_variant / far_ood）都与 L3 **逐张相同**，
+        # 唯一差异是"细层标签的粒度"（12 个 variant 级标签 → 8 个 family 级标签）：
+        # 于是 near_variant（同族未见变体）面对的 ID 头从"4 个兄弟头"变成"1 个父头"。
+        # ⇒ (`3fc` vs L3-V4) 是 `L2df` 在**细层**上的对称消融。
+        # 产物路径由 L{num_layers} 决定 → `models/aircraft/L3fc/`，与历史结果隔离。
+        elif str(self.num_layers) == '3fc':
+            l3_json = os.path.join('splits/aircraft/L3', f'seed_{self.seed}.json')
+            if not os.path.exists(l3_json):
+                FGVCAircraftMixedGranularity(root=self.root, seed=self.seed,
+                                             seen_ratio=self.seen_ratio, num_layers=3)
+            with open(l3_json) as f:
+                l3 = json.load(f)['split_config']
+
+            remap = {}
+            # 粗层 / 中层原样保留（只重编号），并同步 remap 给 gen 靶场用
+            for key in ('coarse_id', 'medium_id'):
+                for item in l3.get(key, []):
+                    new_label = (len(self.split_config['coarse_id'])
+                                 + len(self.split_config['medium_id']))
+                    remap[item['label']] = new_label
+                    self.split_config[key].append({
+                        'label': new_label, 'head_name': item['head_name'],
+                        'seen_variants': list(item['seen_variants'])})
+            for key in ('coarse_gen', 'medium_gen'):
+                for item in l3.get(key, []):
+                    self.split_config[key].append({
+                        'mapped_label': remap[item['mapped_label']],
+                        'unseen_variants': list(item['unseen_variants'])})
+
+            # 细层：把 L3 的 Variant 头按 family 合并
+            by_fam = {}
+            for item in l3.get('fine_id', []):
+                for v in item['seen_variants']:
+                    by_fam.setdefault(self.variant_to_family[v], []).append(v)
+            for fam, vs in by_fam.items():
+                new_label = (len(self.split_config['coarse_id'])
+                             + len(self.split_config['medium_id'])
+                             + len(self.split_config['fine_id']))
+                self.split_config['fine_id'].append({
+                    'label': new_label, 'head_name': f'{fam} (Family)',
+                    'seen_variants': list(vs)})
+
+            # 靶场逐张照搬 L3（本消融的关键：靶场不变，只改细层标签粒度）
+            self.split_config['near_family'] = list(l3.get('near_family', []))
+            self.split_config['near_variant'] = list(l3.get('near_variant', []))
+            self.split_config['far_ood'] = list(l3.get('far_ood', []))
+            current_label = (len(self.split_config['coarse_id'])
+                             + len(self.split_config['medium_id'])
+                             + len(self.split_config['fine_id']))
+
         self.total_id_classes = current_label
         with open(self.split_config_path, 'w') as f:
             json.dump({"seed": self.seed, "total_id_classes": self.total_id_classes, "split_config": self.split_config}, f, indent=4)
@@ -239,7 +367,29 @@ class FGVCAircraftMixedGranularity:
 
 
             
-    def get_datasets(self, include_unseen=False):
+    def get_datasets(self, include_unseen=False, eval_view="V4"):
+        """
+        评估靶场视图（仅对 num_layers == 3 生效；L2 没有 medium_gen / near_family）。
+
+        动机：L2 与 L3 是两套独立抽签的划分，ID 类与训练图片完全不同，无法比较"层数的影响"。
+        因此在同一套 L3 ID / 同一份权重下，只切换 OOD 靶场的构成，做 2x2 正交对照：
+
+            | 视图 | gen 集                          | near 集                        |
+            |------|--------------------------------|--------------------------------|
+            | V1   | medium_gen                     | near_variant                   |
+            | V2   | medium_gen                     | near_variant + near_family     |
+            | V3   | medium_gen + coarse_gen        | near_variant                   |
+            | V4   | medium_gen + coarse_gen        | near_variant + near_family     |
+
+        V1 是"≈两层语义"的视图（Family 级泛化 + 同族未见变体），V4 是当前 L3 全量口径。
+        V1->V2 单独度量"引入兄弟族近邻"的代价，V1->V3 单独度量"引入 Maker 级粗泛化"的代价。
+
+        ★ 关键约束：本参数只改变 test 侧四个集合的装载，**不影响 train_map 与 test_id**。
+          因此 V1~V4 共用同一份训练数据、同一份 ID 测试集和同一份权重，指标差异可完全归因于靶场复杂度。
+        """
+        use_coarse_gen = eval_view in ("V3", "V4")
+        use_near_family = eval_view in ("V2", "V4")
+
         train_map, coarse_gen_map, medium_gen_map = {}, {}, {}
         for item in self.split_config["coarse_id"]:
             for v in item["seen_variants"]: train_map[v] = item["label"]
@@ -279,9 +429,13 @@ class FGVCAircraftMixedGranularity:
 
                     if phase == 'test':
                         if v_name in train_map: test_id_data.append((img_id, train_map[v_name]))
-                        elif v_name in coarse_gen_map: test_c_gen.append((img_id, coarse_gen_map[v_name]))
+                        elif v_name in coarse_gen_map:
+                            # 仅 V3/V4：Maker 级未见家族的变体作为粗粒度泛化样本
+                            if use_coarse_gen: test_c_gen.append((img_id, coarse_gen_map[v_name]))
                         elif v_name in medium_gen_map: test_m_gen.append((img_id, medium_gen_map[v_name]))
-                        elif v_name in near_fam_set: test_near_f.append((img_id, v_name))
+                        elif v_name in near_fam_set:
+                            # 仅 V2/V4：同 maker 下的兄弟家族变体作为近邻 OOD
+                            if use_near_family: test_near_f.append((img_id, v_name))
                         elif v_name in near_var_set: test_near_v.append((img_id, v_name))
                         elif v_name in far_ood_set: test_far.append((img_id, v_name))
 

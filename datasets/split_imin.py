@@ -98,7 +98,31 @@ class TreeBasedMixedGranularity:
                         img_path = os.path.join(class_dir, img_name)
                         self.image_records[phase].append((img_path, class_name))
 
-    def get_datasets(self, include_unseen=False):
+    def get_datasets(self, include_unseen=False, eval_view="V4"):
+        """
+        评估靶场视图（仅 num_layers == 3；本类下 **imagenet 支持 V3/V4**，
+        iNaturalist 的 L3 medium_gen 为空 → 只支持默认 V4）。
+
+        动机：L2 与 L3 是两套独立抽签的划分，ID 类与训练图片完全不同，无法比较"层数的影响"。
+        因此在同一套 L3 ID / 同一份权重下，只切换 OOD 靶场的构成：
+
+            | 视图 | gen 集                       | near 集                     |
+            |------|------------------------------|-----------------------------|
+            | V3   | medium_gen + coarse_gen      | near_variant                |
+            | V4   | medium_gen + coarse_gen      | near_variant + near_family  |
+
+        ⚠️ imagenet 的 L3 `medium_gen` 只有 50~500 张（seed 45 仅 50 张），若开放 V1/V2
+           （gen 集只由 medium_gen 构成），Gen Acc / CV-RR 会退化成小样本噪声；因此在
+           datasets/__init__.py 与 run.sh 两处**硬校验拒绝** imagenet 的 V1/V2。
+           于是本类下 V3/V4 的 gen 集恒为全量，**V3 -> V4 只增加 near_family**
+           （即"引入兄弟族近邻"的代价），与 aircraft 的 V1 -> V2 是同一类正交增量。
+
+        ★ 关键约束：本参数只改变 test 侧集合的装载，**不影响 train_map 与 test_id**。
+          因此 V3/V4 共用同一份训练数据、同一份 ID 测试集和同一份权重，指标差异可完全归因于靶场复杂度。
+        """
+        use_coarse_gen = eval_view in ("V3", "V4")
+        use_near_family = eval_view in ("V2", "V4")
+
         train_map, coarse_gen_map, medium_gen_map = {}, {}, {}
         for item in self.split_config["coarse_id"]:
             for v in item["seen_variants"]: train_map[v] = item["label"]
@@ -129,9 +153,11 @@ class TreeBasedMixedGranularity:
                         elif v_name in medium_gen_map: train_data.append((img_path, medium_gen_map[v_name]))
                 elif phase == 'test':
                     if v_name in train_map: test_id_data.append((img_path, train_map[v_name]))
-                    elif v_name in coarse_gen_map: test_c_gen.append((img_path, coarse_gen_map[v_name]))
+                    elif v_name in coarse_gen_map:
+                        if use_coarse_gen: test_c_gen.append((img_path, coarse_gen_map[v_name]))
                     elif v_name in medium_gen_map: test_m_gen.append((img_path, medium_gen_map[v_name]))
-                    elif v_name in near_fam_set: test_near_f.append((img_path, v_name))
+                    elif v_name in near_fam_set:
+                        if use_near_family: test_near_f.append((img_path, v_name))
                     elif v_name in near_var_set: test_near_v.append((img_path, v_name))
                     elif v_name in far_ood_set: test_far.append((img_path, v_name))
 
